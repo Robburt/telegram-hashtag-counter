@@ -1,13 +1,18 @@
 import re
 import os
+import sys
 import xlsxwriter
 from bs4 import BeautifulSoup
 
 save_dir = "results.xlsx"
 hashtag_regex = "[\n>]#[^< ]+[<\n]"
+if sys.argv[1] is not None:
+    messages_dir = sys.argv[1]
+else:
+    messages_dir = ''
 
 tag_rates = {}
-file_names = [i for i in os.listdir() if i[-5:] == '.html']
+file_names = [messages_dir + "\\" + i for i in os.listdir(messages_dir) if i[-5:] == '.html']
 for file_name in file_names:
     with open(file_name, encoding='utf-8') as file:
         contents = file.read()

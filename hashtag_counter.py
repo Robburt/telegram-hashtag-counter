@@ -35,12 +35,12 @@ for tag_amount, tag_name_list in result.items():
 
 workbook = xlsxwriter.Workbook(save_dir)
 worksheet = workbook.add_worksheet()
-biggest_tag_lenght = 0
+biggest_tag_length = 0
 for tag_name_list in result.values():
     for tag_name in tag_name_list:
-        if len(tag_name) > biggest_tag_lenght:
-            biggest_tag_lenght = len(tag_name)
-worksheet.set_column(0, 0, biggest_tag_lenght)
+        if len(tag_name) > biggest_tag_length:
+            biggest_tag_length = len(tag_name)
+worksheet.set_column(0, 0, biggest_tag_length)
 row = 0
 for tag_amount, tag_name_list in result.items():
     for tag_name in tag_name_list:

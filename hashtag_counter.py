@@ -52,4 +52,15 @@ for tag_amount, tag_name_list in result.items():
         worksheet.write(row, 0, tag_name)
         worksheet.write(row, 1, tag_amount)
         row += 1
+
+additional_information = {
+    "Tags total": sum([len(i) for i in result.values()]),
+    "Tag uses total": sum(list(map(int, result.keys())))
+}
+worksheet.set_column(3, 3, len(max(additional_information.keys())))
+row = 0
+for key, value in additional_information.items():
+    worksheet.write(row, 2, key)
+    worksheet.write(row, 3, value)
+    row += 1
 workbook.close()

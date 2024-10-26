@@ -4,24 +4,33 @@ import sys
 import xlsxwriter
 from bs4 import BeautifulSoup
 
+def progress_bar(current, total, bar_length=20):
+    fraction = current / total
+    arrow = int(fraction * bar_length - 1) * '-' + '>'
+    padding = int(bar_length - len(arrow)) * ' '
+    ending = '\n' if current == total else '\r'
+    print(f'Progress: [{arrow}{padding}] {int(fraction*100)}%', end=ending)
+
 save_dir = "results.xlsx"
 hashtag_regex = "[\n>]#[^< ]+[<\n]"
 if sys.argv[1] is not None:
     messages_dir = sys.argv[1]
 else:
     messages_dir = ''
+print(f"Counting hashtags at {messages_dir}")
 
 tag_rates = {}
 file_names = [messages_dir + "\\" + i for i in os.listdir(messages_dir) if i[-5:] == '.html']
-for file_name in file_names:
+progress_bar(0, len(file_names))
+for n, file_name in enumerate(file_names[:2]):
     with open(file_name, encoding='utf-8') as file:
         tags = re.findall(hashtag_regex, str(BeautifulSoup(file.read(), 'html.parser')))
-    for i in tags:
-        tag = str.lower(i[2:-1])
+    for raw_tag in tags:
+        tag = str.lower(raw_tag[2:-1])
         if tag not in tag_rates.keys():
             tag_rates[tag] = 0
         tag_rates[tag] += 1
-    print(f'{file_name} completed')
+    progress_bar(n, len(file_names))
 
 tag_rates = dict(sorted(tag_rates.items(), key=lambda x:x[1], reverse=True))
 
@@ -60,3 +69,5 @@ for key, value in additional_information.items():
     worksheet.write(row, 3, value)
     row += 1
 workbook.close()
+
+print(f"Counting completed successfully, data saved at {save_dir}")

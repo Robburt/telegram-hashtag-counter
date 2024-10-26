@@ -15,10 +15,7 @@ tag_rates = {}
 file_names = [messages_dir + "\\" + i for i in os.listdir(messages_dir) if i[-5:] == '.html']
 for file_name in file_names:
     with open(file_name, encoding='utf-8') as file:
-        contents = file.read()
-    soup = BeautifulSoup(contents, 'html.parser')
-    soup = str(soup)
-    tags = re.findall(hashtag_regex, soup)
+        tags = re.findall(hashtag_regex, str(BeautifulSoup(file.read(), 'html.parser')))
     for i in tags:
         tag = str.lower(i[2:-1])
         if tag not in tag_rates.keys():
@@ -26,8 +23,7 @@ for file_name in file_names:
         tag_rates[tag] += 1
     print(f'{file_name} completed')
 
-tag_rates = sorted(tag_rates.items(), key=lambda x:x[1], reverse=True)
-tag_rates = dict(tag_rates)
+tag_rates = dict(sorted(tag_rates.items(), key=lambda x:x[1], reverse=True))
 
 result = {}
 for tag_name, tag_amount in tag_rates.items():

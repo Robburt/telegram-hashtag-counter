@@ -1,4 +1,3 @@
-import re
 import os
 import sys
 import time
@@ -16,21 +15,24 @@ def progress_bar(current, total, bar_length=20):
 
 def counter(messages_dir, scan_amount):
     save_dir = "results.xlsx"
-    hashtag_regex = "[\n>]#[^< ]+[<\n]"
 
     print(f"Counting hashtags at {messages_dir}")
     start_time = time.time()
 
     tag_rates = {}
-    file_names = [messages_dir + "\\" + i for i in os.listdir(messages_dir) if i[-5:] == '.html']
-    progress_bar(0, len(file_names))
+    file_names = [i for i in os.listdir(messages_dir) if i[-5:] == '.html']
+    progress_bar(0, len(file_names[:scan_amount]))
     for n, file_name in enumerate(file_names[:scan_amount]):
-        with open(file_name, encoding='utf-8') as file:
-            for raw_tag in re.finditer(hashtag_regex, str(BeautifulSoup(file.read(), 'html.parser'))):
-                tag = str.lower(raw_tag[0][2:-1])
-                if tag not in tag_rates.keys():
-                    tag_rates[tag] = 0
-                tag_rates[tag] += 1
+        with open(messages_dir + "\\" + file_name, encoding='utf-8') as file:
+            contents = file.read()
+        soup = BeautifulSoup(contents, 'html.parser')
+        for i in soup("a"):
+            if i.string is not None:
+                if i.string[0] == '#':
+                    tag = str.lower(i.string[1:])
+                    if tag not in tag_rates.keys():
+                        tag_rates[tag] = 0
+                    tag_rates[tag] += 1
         progress_bar(n, len(file_names))
 
     tag_rates = dict(sorted(tag_rates.items(), key=lambda x: x[1], reverse=True))

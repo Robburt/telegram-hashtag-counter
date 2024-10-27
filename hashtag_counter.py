@@ -5,12 +5,14 @@ import time
 import xlsxwriter
 from bs4 import BeautifulSoup
 
+
 def progress_bar(current, total, bar_length=20):
     fraction = current / total
     arrow = int(fraction * bar_length - 1) * '-' + '>'
     padding = int(bar_length - len(arrow)) * ' '
     ending = '\n' if current == total else '\r'
-    print(f'Progress: [{arrow}{padding}] {int(fraction*100)}%', end=ending)
+    print(f'Progress: [{arrow}{padding}] {int(fraction * 100)}%', end=ending)
+
 
 save_dir = "results.xlsx"
 hashtag_regex = "[\n>]#[^< ]+[<\n]"
@@ -32,7 +34,7 @@ for n, file_name in enumerate(file_names[:scan_amount]):
             tag_rates[tag] += 1
     progress_bar(n, len(file_names))
 
-tag_rates = dict(sorted(tag_rates.items(), key=lambda x:x[1], reverse=True))
+tag_rates = dict(sorted(tag_rates.items(), key=lambda x: x[1], reverse=True))
 
 result = {}
 for tag_name, tag_amount in tag_rates.items():

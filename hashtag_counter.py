@@ -31,7 +31,7 @@ def progress_bar(current, total, bar_length=20):
 
 def counter(messages_dir, scan_amount):
     save_dir = "results.xlsx"
-    print(f"Counting hashtags at {messages_dir if messages_dir is not None else 'here'}")
+    print(f"Counting hashtags at {messages_dir if messages_dir is not None else 'current directory'}...")
     start_time = time.time()
 
     tag_rates = {}

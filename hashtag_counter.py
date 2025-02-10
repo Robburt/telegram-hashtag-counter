@@ -5,8 +5,9 @@ import xlsxwriter
 from bs4 import BeautifulSoup
 
 class Table:
-    def __init__(self, save_dir):
-        self.workbook = xlsxwriter.Workbook(save_dir)
+    def __init__(self):
+        self.save_dir = "results.xlsx"
+        self.workbook = xlsxwriter.Workbook(self.save_dir)
         self.worksheet = self.workbook.add_worksheet()
         self.next_free_column = 0
 
@@ -29,19 +30,18 @@ def progress_bar(current, total, bar_length=20):
     print(f'Progress: [{arrow}{padding}] {int(fraction * 100)}%', end=ending)
 
 
-def counter(messages_dir, scan_amount):
-    save_dir = "results.xlsx"
-    print(f"Counting hashtags at {messages_dir if messages_dir is not None else 'current directory'}...")
+def counter(history_dir, scan_amount):
+    print(f"Counting hashtags at {history_dir if history_dir is not None else 'current directory'}...")
     start_time = time.time()
 
-    tag_rates = {}
-    file_names = [i for i in os.listdir(messages_dir if messages_dir is not None else None) if i[-5:] == '.html']
+    uses_per_tag = {}
+    file_names = [i for i in os.listdir(history_dir if history_dir is not None else None) if i[-5:] == '.html']
     progress_bar(0, len(file_names[:scan_amount]))
     for n, file_name in enumerate(file_names[:scan_amount]):
-        if messages_dir is None:
+        if history_dir is None:
             directory = file_name
         else:
-            directory = os.path.join(messages_dir, file_name)
+            directory = os.path.join(history_dir, file_name)
         with open(directory, encoding='utf-8') as file:
             contents = file.read()
         soup = BeautifulSoup(contents, 'html.parser')
@@ -49,42 +49,42 @@ def counter(messages_dir, scan_amount):
             if i.string is not None:
                 if i.string[0] == '#':
                     tag = str.lower(i.string[1:])
-                    if tag not in tag_rates.keys():
-                        tag_rates[tag] = 0
-                    tag_rates[tag] += 1
+                    if tag not in uses_per_tag.keys():
+                        uses_per_tag[tag] = 0
+                    uses_per_tag[tag] += 1
         progress_bar(n, len(file_names))
 
     #sort by amount
-    tag_rates = dict(sorted(tag_rates.items(), key=lambda x: x[1], reverse=True))
+    uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
 
-    #result = { "amount_of_tag" : [tags with this amount] }
-    result = {}
-    tag_list = {}
-    for tag_name, tag_amount in tag_rates.items():
-        ta = str(tag_amount)
-        if ta not in result.keys():
-            result[ta] = []
-        result[ta].append(tag_name)
-    for tag_amount, tag_name_list in result.items():
-        tag_name_list_sorted = sorted(tag_name_list)
-        for tag_name in tag_name_list_sorted:
-            tag_list[tag_name] = tag_amount
+    #sort each amount alphabetically
+    tags_per_uses = {} # { N : [list of tags used N times] }
+    uses_per_tag_sorted = {}
+    for tag, uses in uses_per_tag.items():
+        uses_str = str(uses)
+        if uses_str not in tags_per_uses.keys():
+            tags_per_uses[uses_str] = []
+        tags_per_uses[uses_str].append(tag)
+    for uses, tags in tags_per_uses.items():
+        tags_sorted = sorted(tags)
+        for tag in tags_sorted:
+            uses_per_tag_sorted[tag] = uses
 
     additional_information = {
-        "Tags total": len(tag_list.keys()),
-        "Tag uses total": sum(list(map(int, tag_list.values())))
+        "Tags total": len(uses_per_tag_sorted.keys()),
+        "Tag uses total": sum(list(map(int, uses_per_tag_sorted.values())))
     }
 
-    table = Table(save_dir)
-    table.print_dict(tag_list)
+    table = Table()
+    table.print_dict(uses_per_tag_sorted)
     table.print_dict(additional_information)
     table.close_workbook()
 
-    print(f"Counting completed in {round(time.time() - start_time, 2)} seconds, data saved at {save_dir}")
+    print(f"Counting completed in {round(time.time() - start_time, 2)} seconds, data saved at {table.save_dir}")
 
 
 if __name__ == "__main__":
     history_directory = sys.argv[1] if len(sys.argv) > 1 else None
-    files_to_scan = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    amount_to_scan = int(sys.argv[2]) if len(sys.argv) > 2 else None
 
-    counter(history_directory, files_to_scan)
+    counter(history_directory, amount_to_scan)

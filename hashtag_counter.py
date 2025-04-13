@@ -10,14 +10,31 @@ class Table:
         self.workbook = xlsxwriter.Workbook(self.save_dir)
         self.worksheet = self.workbook.add_worksheet()
         self.next_free_column = 0
+        self.offset = 1
 
-    def print_dict(self, dictionary):
+    def print_dict(self, dictionary, title1, title2):
         title_column_width = max([len(key) for key in dictionary.keys()])
         self.worksheet.set_column(self.next_free_column, self.next_free_column, title_column_width)
+        self.worksheet.write(0, self.next_free_column, title1)
+        self.worksheet.write(0, self.next_free_column + 1, title2)
         for row, key, value in zip(range(len(dictionary.keys())), dictionary.keys(), dictionary.values()):
-            self.worksheet.write(row, self.next_free_column, key)
-            self.worksheet.write(row, self.next_free_column + 1, value)
+            self.worksheet.write(row + self.offset, self.next_free_column, key)
+            self.worksheet.write(row + self.offset, self.next_free_column + 1, value)
         self.next_free_column += 2
+
+    def print_groups(self, dictionary):
+        groups = {}
+        with open("groups.txt") as f:
+            for line in f:
+                group_name, tags_in_group = line.split(": ")
+                groups[group_name] = tags_in_group.split()
+        for group_name, tag_list in groups.items():
+            print_query = {}
+            for tag, value in dictionary.items():
+                if tag in tag_list:
+                    print_query[tag] = value
+            self.print_dict(print_query, group_name, '')
+
 
     def close_workbook(self):
         self.workbook.close()
@@ -32,7 +49,6 @@ def progress_bar(current, total, bar_length=20):
 
 def counter(history_dir, scan_amount):
     print(f"Counting hashtags at {history_dir if history_dir is not None else 'current directory'}...")
-    start_time = time.time()
 
     uses_per_tag = {}
     file_names = [i for i in os.listdir(history_dir if history_dir is not None else None) if i[-5:] == '.html']
@@ -76,15 +92,18 @@ def counter(history_dir, scan_amount):
     }
 
     table = Table()
-    table.print_dict(uses_per_tag_sorted)
-    table.print_dict(additional_information)
+    table.print_dict(uses_per_tag_sorted, 'Tag', 'Tag uses')
+    table.print_dict(additional_information, '', '')
+    table.print_groups(uses_per_tag_sorted)
     table.close_workbook()
-
-    print(f"Counting completed in {round(time.time() - start_time, 2)} seconds, data saved at {table.save_dir}")
 
 
 if __name__ == "__main__":
     history_directory = sys.argv[1] if len(sys.argv) > 1 else None
     amount_to_scan = int(sys.argv[2]) if len(sys.argv) > 2 else None
 
+    start_time = time.time()
+
     counter(history_directory, amount_to_scan)
+
+    print(f"Counting completed in {round(time.time() - start_time, 2)} seconds")

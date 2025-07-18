@@ -51,6 +51,9 @@ class Interface:
         self.running = False
         self.json = None
         self.tags_table = {}
+        self.author_tags = {}
+        self.messages_amount = 0
+        self.posts_with_tags = 0
 
     def load(self, json_dir=''):
         directory = os.path.join(json_dir[0], 'result.json')
@@ -67,13 +70,32 @@ class Interface:
             return
 
         uses_per_tag = {}
+        authors = []
+        self.messages_amount = 0
+        self.posts_with_tags = 0
         for message in self.json['messages']:
-            for text_entity in message['text_entities']:
-                if text_entity['type'] == 'hashtag':
-                    tag = text_entity['text'][1:]
-                    if tag not in uses_per_tag.keys():
-                        uses_per_tag[tag] = 0
-                    uses_per_tag[tag] += 1
+            if message['type'] == "message":
+                self.messages_amount += 1
+                next_is_author = False
+                for text_entity in message['text_entities']:
+                    if text_entity['type'] == 'plain':
+                        if text_entity['text'][-3:] == "by ":
+                            next_is_author = True
+                    if text_entity['type'] == 'mention' and next_is_author:
+                        tag = text_entity['text'][1:]
+                        if tag not in uses_per_tag.keys():
+                            uses_per_tag[tag] = 0
+                        uses_per_tag[tag] += 1
+                        authors.append(tag)
+                        next_is_author = False
+                    if text_entity['type'] == 'hashtag':
+                        tag = text_entity['text'][1:]
+                        if tag not in uses_per_tag.keys():
+                            uses_per_tag[tag] = 0
+                        uses_per_tag[tag] += 1
+                        if next_is_author:
+                            authors.append(tag)
+                            next_is_author = False
 
         # sort by amount
         uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
@@ -89,7 +111,10 @@ class Interface:
         for uses, tags in tags_per_uses.items():
             tags_sorted = sorted(tags)
             for tag in tags_sorted:
-                self.tags_table[tag] = uses
+                if tag in authors:
+                    self.author_tags[tag] = uses
+                else:
+                    self.tags_table[tag] = uses
 
     def tag_info(self, tag):
         print(f"{tag} - {self.tags_table[tag]}")
@@ -104,10 +129,16 @@ class Interface:
             "Tag uses total": sum(list(map(int, self.tags_table.values())))
         }
 
+        additional_information_authors = {
+            "Authors total": len(self.author_tags.keys()),
+            "Credited posts": sum(list(map(int, self.author_tags.values())))
+        }
+
         table = Table()
         table.print_dict(self.tags_table, 'Tag', 'Tag uses')
         table.print_dict(additional_information, '', '')
-        table.print_groups(self.tags_table)
+        table.print_dict(self.author_tags, 'Author', 'Works')
+        table.print_dict(additional_information_authors, '', '')
         table.close_workbook()
 
     def exit(self):

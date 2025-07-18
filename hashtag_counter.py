@@ -52,8 +52,7 @@ class Interface:
         self.json = None
         self.tags_table = {}
         self.author_tags = {}
-        self.messages_amount = 0
-        self.posts_with_tags = 0
+        self.forwards = {}
 
     def load(self, json_dir=''):
         directory = os.path.join(json_dir[0], 'result.json')
@@ -71,16 +70,23 @@ class Interface:
 
         uses_per_tag = {}
         authors = []
-        self.messages_amount = 0
-        self.posts_with_tags = 0
+        forwards = []
         for message in self.json['messages']:
             if message['type'] == "message":
-                self.messages_amount += 1
                 next_is_author = False
+
+                if 'forwarded_from' in message.keys():
+                    source = message['forwarded_from']
+                    forwards.append(source)
+                    if source not in uses_per_tag.keys():
+                        uses_per_tag[source] = 0
+                    uses_per_tag[source] += 1
+
                 for text_entity in message['text_entities']:
                     if text_entity['type'] == 'plain':
                         if text_entity['text'][-3:] == "by ":
                             next_is_author = True
+
                     if text_entity['type'] == 'mention' and next_is_author:
                         tag = text_entity['text'][1:]
                         if tag not in uses_per_tag.keys():
@@ -88,6 +94,7 @@ class Interface:
                         uses_per_tag[tag] += 1
                         authors.append(tag)
                         next_is_author = False
+
                     if text_entity['type'] == 'hashtag':
                         tag = text_entity['text'][1:]
                         if tag not in uses_per_tag.keys():
@@ -111,7 +118,9 @@ class Interface:
         for uses, tags in tags_per_uses.items():
             tags_sorted = sorted(tags)
             for tag in tags_sorted:
-                if tag in authors:
+                if tag in forwards:
+                    self.forwards[tag] = uses
+                elif tag in authors:
                     self.author_tags[tag] = uses
                 else:
                     self.tags_table[tag] = uses
@@ -139,6 +148,7 @@ class Interface:
         table.print_dict(additional_information, '', '')
         table.print_dict(self.author_tags, 'Author', 'Works')
         table.print_dict(additional_information_authors, '', '')
+        table.print_dict(self.forwards, 'Reposted from', 'Reposts ammount')
         table.close_workbook()
 
     def exit(self):

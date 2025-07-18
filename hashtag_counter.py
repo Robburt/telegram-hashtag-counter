@@ -1,8 +1,8 @@
 import os
 import sys
-import time
+import json
 import xlsxwriter
-from bs4 import BeautifulSoup
+
 
 class Table:
     def __init__(self):
@@ -33,77 +33,102 @@ class Table:
             for tag, value in dictionary.items():
                 if tag in tag_list:
                     print_query[tag] = value
-            self.print_dict(print_query, group_name, '')
-
+            if len(print_query.keys()) > 0:
+                self.print_dict(print_query, group_name, '')
 
     def close_workbook(self):
         self.workbook.close()
 
-def progress_bar(current, total, bar_length=20):
-    fraction = current / total
-    arrow = int(fraction * bar_length - 1) * '-' + '>'
-    padding = int(bar_length - len(arrow)) * ' '
-    ending = '\n' if current == total else '\r'
-    print(f'Progress: [{arrow}{padding}] {int(fraction * 100)}%', end=ending)
 
+class Interface:
+    def __init__(self):
+        self.commands = {
+            'load': self.load,
+            'count': self.count,
+            'dump': self.dump,
+            'exit': self.exit
+        }
+        self.running = False
+        self.json = None
+        self.tags_table = {}
 
-def counter(history_dir, scan_amount):
-    print(f"Counting hashtags at {history_dir if history_dir is not None else 'current directory'}...")
+    def load(self, json_dir=''):
+        directory = os.path.join(json_dir[0], 'result.json')
+        try:
+            with open(directory, encoding='utf-8') as file:
+                self.json = json.load(file)
+            print("Loaded.")
+        except FileNotFoundError:
+            print(f"No 'result.json' file in {directory}")
 
-    uses_per_tag = {}
-    file_names = [i for i in os.listdir(history_dir if history_dir is not None else None) if i[-5:] == '.html']
-    progress_bar(0, len(file_names[:scan_amount]))
-    for n, file_name in enumerate(file_names[:scan_amount]):
-        if history_dir is None:
-            directory = file_name
-        else:
-            directory = os.path.join(history_dir, file_name)
-        with open(directory, encoding='utf-8') as file:
-            contents = file.read()
-        soup = BeautifulSoup(contents, 'html.parser')
-        for i in soup("a"):
-            if i.string is not None:
-                if i.string[0] == '#':
-                    tag = str.lower(i.string[1:])
+    def count(self):
+        if self.json is None:
+            print("JSON not loaded!")
+            return
+
+        uses_per_tag = {}
+        for message in self.json['messages']:
+            for text_entity in message['text_entities']:
+                if text_entity['type'] == 'hashtag':
+                    tag = text_entity['text'][1:]
                     if tag not in uses_per_tag.keys():
                         uses_per_tag[tag] = 0
                     uses_per_tag[tag] += 1
-        progress_bar(n, len(file_names))
 
-    #sort by amount
-    uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
+        # sort by amount
+        uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
 
-    #sort each amount alphabetically
-    tags_per_uses = {} # { N : [list of tags used N times] }
-    uses_per_tag_sorted = {}
-    for tag, uses in uses_per_tag.items():
-        uses_str = str(uses)
-        if uses_str not in tags_per_uses.keys():
-            tags_per_uses[uses_str] = []
-        tags_per_uses[uses_str].append(tag)
-    for uses, tags in tags_per_uses.items():
-        tags_sorted = sorted(tags)
-        for tag in tags_sorted:
-            uses_per_tag_sorted[tag] = uses
+        # sort each amount alphabetically
+        tags_per_uses = {}  # { N : [list of tags used N times] }
+        self.tags_table = {}
+        for tag, uses in uses_per_tag.items():
+            uses_str = str(uses)
+            if uses_str not in tags_per_uses.keys():
+                tags_per_uses[uses_str] = []
+            tags_per_uses[uses_str].append(tag)
+        for uses, tags in tags_per_uses.items():
+            tags_sorted = sorted(tags)
+            for tag in tags_sorted:
+                self.tags_table[tag] = uses
 
-    additional_information = {
-        "Tags total": len(uses_per_tag_sorted.keys()),
-        "Tag uses total": sum(list(map(int, uses_per_tag_sorted.values())))
-    }
+    def tag_info(self, tag):
+        print(f"{tag} - {self.tags_table[tag]}")
 
-    table = Table()
-    table.print_dict(uses_per_tag_sorted, 'Tag', 'Tag uses')
-    table.print_dict(additional_information, '', '')
-    table.print_groups(uses_per_tag_sorted)
-    table.close_workbook()
+    def dump(self):
+        if len(self.tags_table.keys()) < 1:
+            print("Tags not counted!")
+            return
+
+        additional_information = {
+            "Tags total": len(self.tags_table.keys()),
+            "Tag uses total": sum(list(map(int, self.tags_table.values())))
+        }
+
+        table = Table()
+        table.print_dict(self.tags_table, 'Tag', 'Tag uses')
+        table.print_dict(additional_information, '', '')
+        table.print_groups(self.tags_table)
+        table.close_workbook()
+
+    def exit(self):
+        self.running = False
+
+    def run(self):
+        print("Telegram Hashtag Counter tool running.")
+        self.running = True
+        while self.running:
+            input_command = input(">")
+            input_command = input_command.split()
+            try:
+                cmd, args = input_command[0], input_command[1:]
+                if args:
+                    self.commands[cmd](args)
+                else:
+                    self.commands[cmd]()
+            except KeyError:
+                print("Invalid command.")
 
 
 if __name__ == "__main__":
-    history_directory = sys.argv[1] if len(sys.argv) > 1 else None
-    amount_to_scan = int(sys.argv[2]) if len(sys.argv) > 2 else None
-
-    start_time = time.time()
-
-    counter(history_directory, amount_to_scan)
-
-    print(f"Counting completed in {round(time.time() - start_time, 2)} seconds")
+    Counter = Interface()
+    Counter.run()

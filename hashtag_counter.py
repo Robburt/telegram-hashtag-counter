@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import xlsxwriter
 
@@ -81,28 +80,28 @@ class Interface:
                     if source not in uses_per_tag.keys():
                         uses_per_tag[source] = 0
                     uses_per_tag[source] += 1
+                else:
+                    for text_entity in message['text_entities']:
+                        if text_entity['type'] == 'plain':
+                            if text_entity['text'][-3:] == "by ":
+                                next_is_author = True
 
-                for text_entity in message['text_entities']:
-                    if text_entity['type'] == 'plain':
-                        if text_entity['text'][-3:] == "by ":
-                            next_is_author = True
-
-                    if text_entity['type'] == 'mention' and next_is_author:
-                        tag = text_entity['text'][1:]
-                        if tag not in uses_per_tag.keys():
-                            uses_per_tag[tag] = 0
-                        uses_per_tag[tag] += 1
-                        authors.append(tag)
-                        next_is_author = False
-
-                    if text_entity['type'] == 'hashtag':
-                        tag = text_entity['text'][1:]
-                        if tag not in uses_per_tag.keys():
-                            uses_per_tag[tag] = 0
-                        uses_per_tag[tag] += 1
-                        if next_is_author:
+                        if text_entity['type'] == 'mention' and next_is_author:
+                            tag = text_entity['text'][1:].lower()
+                            if tag not in uses_per_tag.keys():
+                                uses_per_tag[tag] = 0
+                            uses_per_tag[tag] += 1
                             authors.append(tag)
                             next_is_author = False
+
+                        if text_entity['type'] == 'hashtag':
+                            tag = text_entity['text'][1:].lower()
+                            if tag not in uses_per_tag.keys():
+                                uses_per_tag[tag] = 0
+                            uses_per_tag[tag] += 1
+                            if next_is_author:
+                                authors.append(tag)
+                                next_is_author = False
 
         # sort by amount
         uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))

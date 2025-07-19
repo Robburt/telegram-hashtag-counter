@@ -145,6 +145,7 @@ class Interface:
         table = Table()
         table.print_dict(self.tags_table, 'Tag', 'Tag uses')
         table.print_dict(additional_information, '', '')
+        table.print_groups(self.tags_table)
         table.print_dict(self.author_tags, 'Author', 'Works')
         table.print_dict(additional_information_authors, '', '')
         table.print_dict(self.forwards, 'Reposted from', 'Reposts ammount')

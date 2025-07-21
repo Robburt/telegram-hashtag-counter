@@ -1,6 +1,8 @@
 import os
 import json
 import xlsxwriter
+import tkinter as tk
+from tkinter import filedialog
 
 
 class Table:
@@ -39,137 +41,126 @@ class Table:
         self.workbook.close()
 
 
-class Interface:
+class WindowInterface:
     def __init__(self):
-        self.commands = {
-            'load': self.load,
-            'count': self.count,
-            'dump': self.dump,
-            'exit': self.exit
-        }
-        self.running = False
-        self.json = None
-        self.tags_table = {}
-        self.author_tags = {}
-        self.forwards = {}
+        self.root = tk.Tk()
+        self.root.title("Telegram Hashtag Counter - Alpha")
 
-    def load(self, json_dir=''):
-        directory = os.path.join(json_dir[0], 'result.json')
-        try:
-            with open(directory, encoding='utf-8') as file:
-                self.json = json.load(file)
-            print("Loaded.")
-        except FileNotFoundError:
-            print(f"No 'result.json' file in {directory}")
+        self.welcome_label = tk.Label(self.root, text="Welcome to Telegram Hashtag Counter.\nPlease select a path to the result.json file below.")
+        self.welcome_label.pack(pady=20)
+
+        self.entry_frame = tk.Frame(self.root, border=20)
+
+        self.results_dir = tk.StringVar()
+
+        self.directory_entry = tk.Entry(self.entry_frame, textvariable=self.results_dir, width=100)
+        self.directory_entry.grid(row=0, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+
+        self.directory_browse = tk.Button(self.entry_frame, text="Browse...", command=self.show_browse_window)
+        self.directory_browse.grid(row=0, column=1, sticky=tk.W+tk.E)
+
+        self.entry_frame.pack()
+
+        self.start = tk.Button(self.root, text="Count", command=self.count)
+        self.start.pack(pady=20)
+
+        self.root.mainloop()
+
+    def show_browse_window(self):
+        results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
+        self.results_dir.set(results_dir.name)
 
     def count(self):
-        if self.json is None:
-            print("JSON not loaded!")
-            return
+        count_all_tags(self.results_dir.get())
+        os.startfile(os.path.join(os.getcwd(), 'results.xlsx'))
 
-        uses_per_tag = {}
-        authors = []
-        forwards = []
-        for message in self.json['messages']:
-            if message['type'] == "message":
-                next_is_author = False
 
-                if 'forwarded_from' in message.keys():
-                    source = message['forwarded_from']
-                    forwards.append(source)
-                    if source not in uses_per_tag.keys():
-                        uses_per_tag[source] = 0
-                    uses_per_tag[source] += 1
-                else:
-                    for text_entity in message['text_entities']:
-                        if text_entity['type'] == 'plain':
-                            if text_entity['text'][-3:] == "by ":
-                                next_is_author = True
+def count_all_tags(directory):
+    with open(directory, encoding='utf-8') as file:
+        results = json.load(file)
 
-                        if text_entity['type'] == 'mention' and next_is_author:
-                            tag = text_entity['text'][1:].lower()
-                            if tag not in uses_per_tag.keys():
-                                uses_per_tag[tag] = 0
-                            uses_per_tag[tag] += 1
+    tags_table = {}
+    author_tags = {}
+    forwards_dict = {}
+
+    uses_per_tag = {}
+    authors = []
+    forwards = []
+    for message in results['messages']:
+        if message['type'] == "message":
+            next_is_author = False
+
+            if 'forwarded_from' in message.keys():
+                source = message['forwarded_from']
+                if source is None:
+                    source = 'Deleted account'
+                forwards.append(source)
+                if source not in uses_per_tag.keys():
+                    uses_per_tag[source] = 0
+                uses_per_tag[source] += 1
+            else:
+                for text_entity in message['text_entities']:
+                    if text_entity['type'] == 'plain':
+                        if text_entity['text'][-3:] == "by ":
+                            next_is_author = True
+
+                    if text_entity['type'] == 'mention' and next_is_author:
+                        tag = text_entity['text'][1:].lower()
+                        if tag not in uses_per_tag.keys():
+                            uses_per_tag[tag] = 0
+                        uses_per_tag[tag] += 1
+                        authors.append(tag)
+                        next_is_author = False
+
+                    if text_entity['type'] == 'hashtag':
+                        tag = text_entity['text'][1:].lower()
+                        if tag not in uses_per_tag.keys():
+                            uses_per_tag[tag] = 0
+                        uses_per_tag[tag] += 1
+                        if next_is_author:
                             authors.append(tag)
                             next_is_author = False
 
-                        if text_entity['type'] == 'hashtag':
-                            tag = text_entity['text'][1:].lower()
-                            if tag not in uses_per_tag.keys():
-                                uses_per_tag[tag] = 0
-                            uses_per_tag[tag] += 1
-                            if next_is_author:
-                                authors.append(tag)
-                                next_is_author = False
+    # sort by amount
+    uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
 
-        # sort by amount
-        uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
+    # sort each amount alphabetically
+    tags_per_uses = {}  # { N : [list of tags used N times] }
+    tags_table = {}
+    for tag, uses in uses_per_tag.items():
+        uses_str = str(uses)
+        if uses_str not in tags_per_uses.keys():
+            tags_per_uses[uses_str] = []
+        tags_per_uses[uses_str].append(tag)
+    for uses, tags in tags_per_uses.items():
+        tags_sorted = sorted(tags)
+        for tag in tags_sorted:
+            if tag in forwards:
+                forwards_dict[tag] = uses
+            elif tag in authors:
+                author_tags[tag] = uses
+            else:
+                tags_table[tag] = uses
 
-        # sort each amount alphabetically
-        tags_per_uses = {}  # { N : [list of tags used N times] }
-        self.tags_table = {}
-        for tag, uses in uses_per_tag.items():
-            uses_str = str(uses)
-            if uses_str not in tags_per_uses.keys():
-                tags_per_uses[uses_str] = []
-            tags_per_uses[uses_str].append(tag)
-        for uses, tags in tags_per_uses.items():
-            tags_sorted = sorted(tags)
-            for tag in tags_sorted:
-                if tag in forwards:
-                    self.forwards[tag] = uses
-                elif tag in authors:
-                    self.author_tags[tag] = uses
-                else:
-                    self.tags_table[tag] = uses
+    additional_information = {
+        "Tags total": len(tags_table.keys()),
+        "Tag uses total": sum(list(map(int, tags_table.values())))
+    }
 
-    def tag_info(self, tag):
-        print(f"{tag} - {self.tags_table[tag]}")
+    additional_information_authors = {
+        "Authors total": len(author_tags.keys()),
+        "Credited posts": sum(list(map(int, author_tags.values())))
+    }
 
-    def dump(self):
-        if len(self.tags_table.keys()) < 1:
-            print("Tags not counted!")
-            return
-
-        additional_information = {
-            "Tags total": len(self.tags_table.keys()),
-            "Tag uses total": sum(list(map(int, self.tags_table.values())))
-        }
-
-        additional_information_authors = {
-            "Authors total": len(self.author_tags.keys()),
-            "Credited posts": sum(list(map(int, self.author_tags.values())))
-        }
-
-        table = Table()
-        table.print_dict(self.tags_table, 'Tag', 'Tag uses')
-        table.print_dict(additional_information, '', '')
-        table.print_groups(self.tags_table)
-        table.print_dict(self.author_tags, 'Author', 'Works')
-        table.print_dict(additional_information_authors, '', '')
-        table.print_dict(self.forwards, 'Reposted from', 'Reposts ammount')
-        table.close_workbook()
-
-    def exit(self):
-        self.running = False
-
-    def run(self):
-        print("Telegram Hashtag Counter tool running.")
-        self.running = True
-        while self.running:
-            input_command = input(">")
-            input_command = input_command.split()
-            try:
-                cmd, args = input_command[0], input_command[1:]
-                if args:
-                    self.commands[cmd](args)
-                else:
-                    self.commands[cmd]()
-            except KeyError:
-                print("Invalid command.")
+    table = Table()
+    table.print_dict(tags_table, 'Tag', 'Tag uses')
+    table.print_dict(additional_information, '', '')
+    table.print_groups(tags_table)
+    table.print_dict(author_tags, 'Author', 'Works')
+    table.print_dict(additional_information_authors, '', '')
+    table.print_dict(forwards_dict, 'Reposted from', 'Reposts ammount')
+    table.close_workbook()
 
 
 if __name__ == "__main__":
-    Counter = Interface()
-    Counter.run()
+    WindowInterface()

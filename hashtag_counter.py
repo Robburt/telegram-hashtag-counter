@@ -1,3 +1,4 @@
+import os
 import json
 import xlsxwriter
 import tkinter as tk
@@ -72,6 +73,8 @@ class WindowInterface:
         self.results_box.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.grid(row=2, column=3, sticky=tk.N+tk.S, pady=10)
 
+        self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
+
         self.contents.grid(row=0, column=0)
         self.tag_info.grid(row=0, column=1, sticky=tk.N)
 
@@ -91,6 +94,7 @@ class WindowInterface:
         except FileNotFoundError:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
+        self.export_button.grid(row=3, column=0, sticky=tk.W)
         tags = [*self.counter.tags_table.keys()]
         tags_var = tk.StringVar(value=tags)
         self.results_box['listvariable'] = tags_var
@@ -106,6 +110,13 @@ class WindowInterface:
         for key, value in tag_info_dict.items():
             tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+
+    def export_to_xlsx(self):
+        try:
+            self.counter.dump()
+            os.startfile(os.path.join(os.getcwd(), 'results.xlsx'))
+        except self.counter.NotCountedException:
+            pass
 
 
 class Counter:
@@ -176,6 +187,9 @@ class Counter:
                     self.tags_table[tag] = uses
 
     def dump(self):
+        if not self.tags_table:
+            raise self.NotCountedException
+
         additional_information = {
             "Tags total": len(self.tags_table.keys()),
             "Tag uses total": sum(list(map(int, self.tags_table.values())))
@@ -194,6 +208,9 @@ class Counter:
         table.print_dict(additional_information_authors, '', '')
         table.print_dict(self.forwards_table, 'Reposted from', 'Reposts amount')
         table.close_workbook()
+
+    class NotCountedException(Exception):
+        pass
 
 
 if __name__ == "__main__":

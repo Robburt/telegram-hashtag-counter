@@ -103,9 +103,7 @@ class WindowInterface:
         self.on_selection_change(self.results_box.curselection())
 
     def on_selection_change(self, selection):
-        tag_info_dict = {
-            "Uses": self.counter.tags_table[self.results_box.get(selection)]
-        }
+        tag_info_dict = self.counter.tags_table[self.results_box.get(selection)].__dict__
         tag_info_labels = []
         for key, value in tag_info_dict.items():
             tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
@@ -176,15 +174,24 @@ class Counter:
             if uses_str not in tags_per_uses.keys():
                 tags_per_uses[uses_str] = []
             tags_per_uses[uses_str].append(tag)
+
+        # assembling final lists
+        rank_tag = 1
+        rank_artist = 1
+        rank_forward = 1
         for uses, tags in tags_per_uses.items():
-            tags_sorted = sorted(tags)
-            for tag in tags_sorted:
+            tags_alphabetically = sorted(tags)
+            for tag in tags_alphabetically:
                 if tag in forwards:
-                    self.forwards_table[tag] = uses
+                    self.forwards_table[tag] = Tag(tag, uses, rank_forward)
+                    rank_forward += 1
                 elif tag in artists:
-                    self.artists_table[tag] = uses
+                    self.artists_table[tag] = Tag(tag, uses, rank_artist)
+                    rank_artist += 1
                 else:
-                    self.tags_table[tag] = uses
+                    self.tags_table[tag] = Tag(tag, uses, rank_tag)
+                    rank_tag += 1
+
 
     def dump(self):
         if not self.tags_table:
@@ -211,6 +218,12 @@ class Counter:
 
     class NotCountedException(Exception):
         pass
+
+class Tag:
+    def __init__(self, name, uses, rank):
+        self.name = name
+        self.uses = uses
+        self.rank = rank
 
 
 if __name__ == "__main__":

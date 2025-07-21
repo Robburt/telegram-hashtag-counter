@@ -105,7 +105,7 @@ class WindowInterface:
         self.on_selection_change(self.results_box.curselection())
 
     def on_selection_change(self, selection):
-        tag_info_dict = self.counter.tags_table[self.results_box.get(selection)].__dict__
+        tag_info_dict = self.counter.tags_table[self.results_box.get(selection)].dictionary
         tag_info_labels = []
         for key, value in tag_info_dict.items():
             tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
@@ -126,10 +126,11 @@ class Counter:
         self.forwards_table = {}
 
     def count(self, directory):
-        def add_to_upt(appended_tag):
+        def add_to_upt(appended_tag, current_message):
+            use_date = current_message['date']
             if appended_tag not in uses_per_tag.keys():
-                uses_per_tag[appended_tag] = 0
-            uses_per_tag[appended_tag] += 1
+                uses_per_tag[appended_tag] = Tag(appended_tag, use_date)
+            uses_per_tag[appended_tag].increment(use_date)
 
         with open(directory, encoding='utf-8') as file:
             results = json.load(file)
@@ -145,7 +146,7 @@ class Counter:
                     source = message['forwarded_from']
                     if source is None:
                         source = 'Deleted account'
-                    add_to_upt(source)
+                    add_to_upt(source, message)
                     forwards.append(source)
                 else:
                     for text_entity in message['text_entities']:
@@ -155,44 +156,34 @@ class Counter:
 
                         if text_entity['type'] == 'mention' and next_is_artist:
                             tag = text_entity['text'][1:].lower()
-                            add_to_upt(tag)
+                            add_to_upt(tag, message)
                             artists.append(tag)
                             next_is_artist = False
 
                         if text_entity['type'] == 'hashtag':
                             tag = text_entity['text'][1:].lower()
-                            add_to_upt(tag)
+                            add_to_upt(tag, message)
                             if next_is_artist:
                                 artists.append(tag)
                                 next_is_artist = False
 
-        # sort by amount
-        uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
-
-        # sort each amount alphabetically
-        tags_per_uses = {}  # { N : [list of tags used N times] }
-        for tag, uses in uses_per_tag.items():
-            uses_str = str(uses)
-            if uses_str not in tags_per_uses.keys():
-                tags_per_uses[uses_str] = []
-            tags_per_uses[uses_str].append(tag)
+        max_uses = max(list(i.uses_amount for i in uses_per_tag.values()))
+        tags_per_uses = {str(i): [] for i in range(max_uses, 0, -1)}
+        for tag in uses_per_tag.values():
+            tags_per_uses[str(tag.uses_amount)].append(tag)
 
         # assembling final lists
-        rank_tag = 1
-        rank_artist = 1
-        rank_forward = 1
-        for uses, tags in tags_per_uses.items():
-            tags_alphabetically = sorted(tags)
+        for uses, tag_list in tags_per_uses.items():
+            if not tag_list:
+                continue
+            tags_alphabetically = sorted(tag_list, key=lambda x: x.name)
             for tag in tags_alphabetically:
-                if tag in forwards:
-                    self.forwards_table[tag] = Tag(tag, uses, rank_forward)
-                    rank_forward += 1
-                elif tag in artists:
-                    self.artists_table[tag] = Tag(tag, uses, rank_artist)
-                    rank_artist += 1
+                if tag.name in forwards:
+                    self.forwards_table[tag.name] = tag
+                elif tag.name in artists:
+                    self.artists_table[tag.name] = tag
                 else:
-                    self.tags_table[tag] = Tag(tag, uses, rank_tag)
-                    rank_tag += 1
+                    self.tags_table[tag.name] = tag
 
 
     def dump(self):
@@ -222,10 +213,25 @@ class Counter:
         pass
 
 class Tag:
-    def __init__(self, name, uses, rank):
+    def __init__(self, name, first_use):
         self.name = name
-        self.uses = uses
-        self.rank = rank
+        self.uses = [first_use]
+
+    @property
+    def uses_amount(self):
+        return len(self.uses)
+
+    @property
+    def dictionary(self):
+        return {
+            'name': self.name,
+            'uses': self.uses_amount,
+            'first use': self.uses[0],
+            'last use': self.uses[-1]
+        }
+
+    def increment(self, use_date):
+        self.uses.append(use_date)
 
 
 if __name__ == "__main__":

@@ -76,13 +76,16 @@ class WindowInterface:
 
 
 def count_all_tags(directory):
+    def add_to_upt(appended_tag):
+        if appended_tag not in uses_per_tag.keys():
+            uses_per_tag[appended_tag] = 0
+        uses_per_tag[appended_tag] += 1
+
     with open(directory, encoding='utf-8') as file:
         results = json.load(file)
 
-    tags_table = {}
     author_tags = {}
     forwards_dict = {}
-
     uses_per_tag = {}
     authors = []
     forwards = []
@@ -94,10 +97,8 @@ def count_all_tags(directory):
                 source = message['forwarded_from']
                 if source is None:
                     source = 'Deleted account'
+                add_to_upt(source)
                 forwards.append(source)
-                if source not in uses_per_tag.keys():
-                    uses_per_tag[source] = 0
-                uses_per_tag[source] += 1
             else:
                 for text_entity in message['text_entities']:
                     if text_entity['type'] == 'plain':
@@ -106,17 +107,13 @@ def count_all_tags(directory):
 
                     if text_entity['type'] == 'mention' and next_is_author:
                         tag = text_entity['text'][1:].lower()
-                        if tag not in uses_per_tag.keys():
-                            uses_per_tag[tag] = 0
-                        uses_per_tag[tag] += 1
+                        add_to_upt(tag)
                         authors.append(tag)
                         next_is_author = False
 
                     if text_entity['type'] == 'hashtag':
                         tag = text_entity['text'][1:].lower()
-                        if tag not in uses_per_tag.keys():
-                            uses_per_tag[tag] = 0
-                        uses_per_tag[tag] += 1
+                        add_to_upt(tag)
                         if next_is_author:
                             authors.append(tag)
                             next_is_author = False
@@ -158,7 +155,7 @@ def count_all_tags(directory):
     table.print_groups(tags_table)
     table.print_dict(author_tags, 'Author', 'Works')
     table.print_dict(additional_information_authors, '', '')
-    table.print_dict(forwards_dict, 'Reposted from', 'Reposts ammount')
+    table.print_dict(forwards_dict, 'Reposted from', 'Reposts amount')
     table.close_workbook()
 
 

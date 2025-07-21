@@ -20,6 +20,8 @@ class Table:
         self.worksheet.write(0, self.next_free_column, title1)
         self.worksheet.write(0, self.next_free_column + 1, title2)
         for row, key, value in zip(range(len(dictionary.keys())), dictionary.keys(), dictionary.values()):
+            if type(value) is Tag:
+                value = value.uses
             self.worksheet.write(row + self.offset, self.next_free_column, key)
             self.worksheet.write(row + self.offset, self.next_free_column + 1, value)
         self.next_free_column += 2
@@ -199,12 +201,12 @@ class Counter:
 
         additional_information = {
             "Tags total": len(self.tags_table.keys()),
-            "Tag uses total": sum(list(map(int, self.tags_table.values())))
+            "Tag uses total": sum(list(map(int, [i.uses for i in self.tags_table.values()])))
         }
 
         additional_information_authors = {
             "Authors total": len(self.artists_table.keys()),
-            "Credited posts": sum(list(map(int, self.artists_table.values())))
+            "Credited posts": sum(list(map(int, [i.uses for i in self.artists_table.values()])))
         }
 
         table = Table()

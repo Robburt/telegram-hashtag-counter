@@ -1,8 +1,8 @@
-import os
 import json
 import xlsxwriter
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import messagebox
 
 
 class Table:
@@ -43,120 +43,157 @@ class Table:
 
 class WindowInterface:
     def __init__(self):
+
+        self.counter = Counter()
+
         self.root = tk.Tk()
         self.root.title("Telegram Hashtag Counter - Alpha")
 
-        self.welcome_label = tk.Label(self.root, text="Welcome to Telegram Hashtag Counter.\nPlease select a path to the result.json file below.")
-        self.welcome_label.pack(pady=20)
+        self.contents = tk.Frame(self.root, border=10)
+        self.tag_info = tk.Frame(self.root)
 
-        self.entry_frame = tk.Frame(self.root, border=20)
+        self.welcome_label = tk.Label(self.contents, text="Welcome to Telegram Hashtag Counter.\nPlease select a path to the result.json file below.", font=("Arial", 15))
+        self.welcome_label.grid(row=0, columnspan=3, pady=20)
 
         self.results_dir = tk.StringVar()
+        self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=70)
+        self.directory_entry.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
 
-        self.directory_entry = tk.Entry(self.entry_frame, textvariable=self.results_dir, width=100)
-        self.directory_entry.grid(row=0, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.directory_browse = tk.Button(self.contents, text="Browse...", command=self.show_browse_window)
+        self.directory_browse.grid(row=1, column=1, sticky=tk.W, padx=5)
 
-        self.directory_browse = tk.Button(self.entry_frame, text="Browse...", command=self.show_browse_window)
-        self.directory_browse.grid(row=0, column=1, sticky=tk.W+tk.E)
+        self.start = tk.Button(self.contents, text="Count", command=self.count, width=20)
+        self.start.grid(row=1, column=2, sticky=tk.E)
 
-        self.entry_frame.pack()
+        self.results_box = tk.Listbox(self.contents, height=20, width=100)
+        self.results_box.grid(row=2, column=0, columnspan=3, sticky=tk.W+tk.E, pady=10)
 
-        self.start = tk.Button(self.root, text="Count", command=self.count)
-        self.start.pack(pady=20)
+        self.scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.results_box.yview)
+        self.results_box.configure(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.grid(row=2, column=3, sticky=tk.N+tk.S, pady=10)
+
+        self.contents.grid(row=0, column=0)
+        self.tag_info.grid(row=0, column=1, sticky=tk.N)
+
+        self.root.update_idletasks()
+        self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
 
         self.root.mainloop()
 
     def show_browse_window(self):
         results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
-        self.results_dir.set(results_dir.name)
+        if results_dir is not None:
+            self.results_dir.set(results_dir.name)
 
     def count(self):
-        count_all_tags(self.results_dir.get())
-        os.startfile(os.path.join(os.getcwd(), 'results.xlsx'))
+        try:
+            self.counter.count(self.results_dir.get())
+        except FileNotFoundError:
+            messagebox.showerror(title="File not found", message="Unable to find result.json file")
+            return
+        tags = [*self.counter.tags_table.keys()]
+        tags_var = tk.StringVar(value=tags)
+        self.results_box['listvariable'] = tags_var
+        self.results_box.bind("<<ListboxSelect>>", lambda e: self.on_selection_change(self.results_box.curselection()))
+        self.results_box.selection_set(0)
+        self.on_selection_change(self.results_box.curselection())
+
+    def on_selection_change(self, selection):
+        tag_info_dict = {
+            "Uses": self.counter.tags_table[self.results_box.get(selection)]
+        }
+        tag_info_labels = []
+        for key, value in tag_info_dict.items():
+            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
+            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
 
 
-def count_all_tags(directory):
-    def add_to_upt(appended_tag):
-        if appended_tag not in uses_per_tag.keys():
-            uses_per_tag[appended_tag] = 0
-        uses_per_tag[appended_tag] += 1
+class Counter:
+    def __init__(self):
+        self.tags_table = {}
+        self.artists_table = {}
+        self.forwards_table = {}
 
-    with open(directory, encoding='utf-8') as file:
-        results = json.load(file)
+    def count(self, directory):
+        def add_to_upt(appended_tag):
+            if appended_tag not in uses_per_tag.keys():
+                uses_per_tag[appended_tag] = 0
+            uses_per_tag[appended_tag] += 1
 
-    author_tags = {}
-    forwards_dict = {}
-    uses_per_tag = {}
-    authors = []
-    forwards = []
-    for message in results['messages']:
-        if message['type'] == "message":
-            next_is_author = False
+        with open(directory, encoding='utf-8') as file:
+            results = json.load(file)
 
-            if 'forwarded_from' in message.keys():
-                source = message['forwarded_from']
-                if source is None:
-                    source = 'Deleted account'
-                add_to_upt(source)
-                forwards.append(source)
-            else:
-                for text_entity in message['text_entities']:
-                    if text_entity['type'] == 'plain':
-                        if text_entity['text'][-3:] == "by ":
-                            next_is_author = True
+        uses_per_tag = {}
+        artists = []
+        forwards = []
+        for message in results['messages']:
+            if message['type'] == "message":
+                next_is_artist = False
 
-                    if text_entity['type'] == 'mention' and next_is_author:
-                        tag = text_entity['text'][1:].lower()
-                        add_to_upt(tag)
-                        authors.append(tag)
-                        next_is_author = False
+                if 'forwarded_from' in message.keys():
+                    source = message['forwarded_from']
+                    if source is None:
+                        source = 'Deleted account'
+                    add_to_upt(source)
+                    forwards.append(source)
+                else:
+                    for text_entity in message['text_entities']:
+                        if text_entity['type'] == 'plain':
+                            if text_entity['text'][-3:] == "by ":
+                                next_is_artist = True
 
-                    if text_entity['type'] == 'hashtag':
-                        tag = text_entity['text'][1:].lower()
-                        add_to_upt(tag)
-                        if next_is_author:
-                            authors.append(tag)
-                            next_is_author = False
+                        if text_entity['type'] == 'mention' and next_is_artist:
+                            tag = text_entity['text'][1:].lower()
+                            add_to_upt(tag)
+                            artists.append(tag)
+                            next_is_artist = False
 
-    # sort by amount
-    uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
+                        if text_entity['type'] == 'hashtag':
+                            tag = text_entity['text'][1:].lower()
+                            add_to_upt(tag)
+                            if next_is_artist:
+                                artists.append(tag)
+                                next_is_artist = False
 
-    # sort each amount alphabetically
-    tags_per_uses = {}  # { N : [list of tags used N times] }
-    tags_table = {}
-    for tag, uses in uses_per_tag.items():
-        uses_str = str(uses)
-        if uses_str not in tags_per_uses.keys():
-            tags_per_uses[uses_str] = []
-        tags_per_uses[uses_str].append(tag)
-    for uses, tags in tags_per_uses.items():
-        tags_sorted = sorted(tags)
-        for tag in tags_sorted:
-            if tag in forwards:
-                forwards_dict[tag] = uses
-            elif tag in authors:
-                author_tags[tag] = uses
-            else:
-                tags_table[tag] = uses
+        # sort by amount
+        uses_per_tag = dict(sorted(uses_per_tag.items(), key=lambda x: x[1], reverse=True))
 
-    additional_information = {
-        "Tags total": len(tags_table.keys()),
-        "Tag uses total": sum(list(map(int, tags_table.values())))
-    }
+        # sort each amount alphabetically
+        tags_per_uses = {}  # { N : [list of tags used N times] }
+        for tag, uses in uses_per_tag.items():
+            uses_str = str(uses)
+            if uses_str not in tags_per_uses.keys():
+                tags_per_uses[uses_str] = []
+            tags_per_uses[uses_str].append(tag)
+        for uses, tags in tags_per_uses.items():
+            tags_sorted = sorted(tags)
+            for tag in tags_sorted:
+                if tag in forwards:
+                    self.forwards_table[tag] = uses
+                elif tag in artists:
+                    self.artists_table[tag] = uses
+                else:
+                    self.tags_table[tag] = uses
 
-    additional_information_authors = {
-        "Authors total": len(author_tags.keys()),
-        "Credited posts": sum(list(map(int, author_tags.values())))
-    }
+    def dump(self):
+        additional_information = {
+            "Tags total": len(self.tags_table.keys()),
+            "Tag uses total": sum(list(map(int, self.tags_table.values())))
+        }
 
-    table = Table()
-    table.print_dict(tags_table, 'Tag', 'Tag uses')
-    table.print_dict(additional_information, '', '')
-    table.print_groups(tags_table)
-    table.print_dict(author_tags, 'Author', 'Works')
-    table.print_dict(additional_information_authors, '', '')
-    table.print_dict(forwards_dict, 'Reposted from', 'Reposts amount')
-    table.close_workbook()
+        additional_information_authors = {
+            "Authors total": len(self.artists_table.keys()),
+            "Credited posts": sum(list(map(int, self.artists_table.values())))
+        }
+
+        table = Table()
+        table.print_dict(self.tags_table, 'Tag', 'Tag uses')
+        table.print_dict(additional_information, '', '')
+        table.print_groups(self.tags_table)
+        table.print_dict(self.artists_table, 'Author', 'Works')
+        table.print_dict(additional_information_authors, '', '')
+        table.print_dict(self.forwards_table, 'Reposted from', 'Reposts amount')
+        table.close_workbook()
 
 
 if __name__ == "__main__":

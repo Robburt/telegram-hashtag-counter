@@ -21,7 +21,7 @@ class Table:
         self.worksheet.write(0, self.next_free_column + 1, title2)
         for row, key, value in zip(range(len(dictionary.keys())), dictionary.keys(), dictionary.values()):
             if type(value) is Tag:
-                value = value.uses
+                value = value.uses_amount
             self.worksheet.write(row + self.offset, self.next_free_column, key)
             self.worksheet.write(row + self.offset, self.next_free_column + 1, value)
         self.next_free_column += 2
@@ -231,9 +231,11 @@ class Counter:
         table.print_dict(self.tags_table, 'Tag', 'Tag uses')
         table.print_dict(additional_information, '', '')
         table.print_groups(self.tags_table)
-        table.print_dict(self.artists_table, 'Author', 'Works')
-        table.print_dict(additional_information_authors, '', '')
-        table.print_dict(self.forwards_table, 'Reposted from', 'Reposts amount')
+        if self.artists_table:
+            table.print_dict(self.artists_table, 'Author', 'Works')
+            table.print_dict(additional_information_authors, '', '')
+        if self.forwards_table:
+            table.print_dict(self.forwards_table, 'Reposted from', 'Reposts amount')
         table.close_workbook()
 
     class NotCountedException(Exception):

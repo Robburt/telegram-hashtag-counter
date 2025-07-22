@@ -68,12 +68,11 @@ class WindowInterface:
         self.start = tk.Button(self.contents, text="Count", command=self.count, width=20)
         self.start.grid(row=1, column=2, sticky=tk.E)
 
-        self.results_box = tk.Listbox(self.contents, height=20, width=100)
-        self.results_box.grid(row=2, column=0, columnspan=3, sticky=tk.W+tk.E, pady=10)
-
-        self.scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.results_box.yview)
-        self.results_box.configure(yscrollcommand=self.scrollbar.set)
-        self.scrollbar.grid(row=2, column=3, sticky=tk.N+tk.S, pady=10)
+        self.tag_box = tk.Listbox(self.contents, height=20)
+        self.tag_box.grid(row=2, column=0, columnspan=3, sticky=tk.W + tk.E, pady=10)
+        self.tag_box_scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.tag_box.yview)
+        self.tag_box.configure(yscrollcommand=self.tag_box_scrollbar.set)
+        self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
 
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
 
@@ -99,13 +98,13 @@ class WindowInterface:
         self.export_button.grid(row=3, column=0, sticky=tk.W)
         tags = [*self.counter.tags_table.keys()]
         tags_var = tk.StringVar(value=tags)
-        self.results_box['listvariable'] = tags_var
-        self.results_box.bind("<<ListboxSelect>>", lambda e: self.on_selection_change(self.results_box.curselection()))
-        self.results_box.selection_set(0)
-        self.on_selection_change(self.results_box.curselection())
+        self.tag_box['listvariable'] = tags_var
+        self.tag_box.bind("<<ListboxSelect>>", lambda e: self.on_selection_change(self.tag_box.curselection()))
+        self.tag_box.selection_set(0)
+        self.on_selection_change(self.tag_box.curselection())
 
     def on_selection_change(self, selection):
-        tag = self.counter.tags_table[self.results_box.get(selection)]
+        tag = self.counter.tags_table[self.tag_box.get(selection)]
         tag_info_dict = tag.dictionary
         tag.set_neighbours(self.counter.messages)
         tag_neighbours_dict = tag.neighbours

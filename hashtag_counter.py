@@ -105,11 +105,29 @@ class WindowInterface:
         self.on_selection_change(self.results_box.curselection())
 
     def on_selection_change(self, selection):
-        tag_info_dict = self.counter.tags_table[self.results_box.get(selection)].dictionary
+        tag = self.counter.tags_table[self.results_box.get(selection)]
+        tag_info_dict = tag.dictionary
+        tag.set_neighbours(self.counter.messages)
+        tag_neighbours_dict = tag.neighbours
         tag_info_labels = []
         for key, value in tag_info_dict.items():
             tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+        tag_info_labels.append(tk.Label(self.tag_info, text=f"Tags most commonly used with this tag:", width=100))
+        tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+        top10 = 10
+        for key, value in tag_neighbours_dict.items():
+            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value.uses_amount}", width=100))
+            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+            top10 -= 1
+            if not top10:
+                break
+        if top10 > 0:
+            for i in range(top10):
+                tag_info_labels.append(tk.Label(self.tag_info, text=f"    ", width=100))
+                tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+
+
 
     def export_to_xlsx(self):
         try:
@@ -121,6 +139,7 @@ class WindowInterface:
 
 class Counter:
     def __init__(self):
+        self.messages = []
         self.tags_table = {}
         self.artists_table = {}
         self.forwards_table = {}
@@ -129,7 +148,7 @@ class Counter:
         def add_to_upt(appended_tag, current_message):
             use_date = current_message['date']
             if appended_tag not in uses_per_tag.keys():
-                uses_per_tag[appended_tag] = Tag(appended_tag, use_date)
+                uses_per_tag[appended_tag] = Tag(appended_tag)
             uses_per_tag[appended_tag].increment(use_date)
 
         with open(directory, encoding='utf-8') as file:
@@ -149,6 +168,8 @@ class Counter:
                     add_to_upt(source, message)
                     forwards.append(source)
                 else:
+                    artist = None
+                    tags = []
                     for text_entity in message['text_entities']:
                         if text_entity['type'] == 'plain':
                             if text_entity['text'][-3:] == "by ":
@@ -157,15 +178,21 @@ class Counter:
                         if text_entity['type'] == 'mention' and next_is_artist:
                             tag = text_entity['text'][1:].lower()
                             add_to_upt(tag, message)
-                            artists.append(tag)
+                            artist = tag
                             next_is_artist = False
 
                         if text_entity['type'] == 'hashtag':
                             tag = text_entity['text'][1:].lower()
                             add_to_upt(tag, message)
                             if next_is_artist:
-                                artists.append(tag)
+                                artist = tag
                                 next_is_artist = False
+                            else:
+                                tags.append(tag)
+
+                    if artist is not None:
+                        artists.append(artist)
+                    self.messages.append(Message(message['id'], message['date'], artist, tags))
 
         max_uses = max(list(i.uses_amount for i in uses_per_tag.values()))
         tags_per_uses = {str(i): [] for i in range(max_uses, 0, -1)}
@@ -192,12 +219,12 @@ class Counter:
 
         additional_information = {
             "Tags total": len(self.tags_table.keys()),
-            "Tag uses total": sum(list(map(int, [i.uses for i in self.tags_table.values()])))
+            "Tag uses total": sum(i.uses_amount for i in self.tags_table.values())
         }
 
         additional_information_authors = {
             "Authors total": len(self.artists_table.keys()),
-            "Credited posts": sum(list(map(int, [i.uses for i in self.artists_table.values()])))
+            "Tag uses total": sum(i.uses_amount for i in self.artists_table.values())
         }
 
         table = Table()
@@ -212,10 +239,18 @@ class Counter:
     class NotCountedException(Exception):
         pass
 
+class Message:
+    def __init__(self, msg_id, date, author, tags):
+        self.id = msg_id
+        self.date = date
+        self.author = author
+        self.tags = tags
+
 class Tag:
-    def __init__(self, name, first_use):
+    def __init__(self, name):
         self.name = name
-        self.uses = [first_use]
+        self.uses = []
+        self.neighbours = {}
 
     @property
     def uses_amount(self):
@@ -233,6 +268,33 @@ class Tag:
     def increment(self, use_date):
         self.uses.append(use_date)
 
+    def set_neighbours(self, messages):
+        def add_to_upt(appended_tag, message_date):
+            if appended_tag not in uses_per_tag.keys():
+                uses_per_tag[appended_tag] = Tag(appended_tag)
+            uses_per_tag[appended_tag].increment(message_date)
+
+        uses_per_tag = {}
+        for message in messages:
+            if self.name in message.tags:
+                for tag in message.tags:
+                    if tag != self.name:
+                        add_to_upt(tag, message.date)
+
+        if not uses_per_tag:
+            return
+
+        max_uses = max(list(i.uses_amount for i in uses_per_tag.values()))
+        tags_per_uses = {str(i): [] for i in range(max_uses, 0, -1)}
+        for tag in uses_per_tag.values():
+            tags_per_uses[str(tag.uses_amount)].append(tag)
+
+        for uses, tag_list in tags_per_uses.items():
+            if not tag_list:
+                continue
+            tags_alphabetically = sorted(tag_list, key=lambda x: x.name)
+            for tag in tags_alphabetically:
+                self.neighbours[tag.name] = tag
 
 if __name__ == "__main__":
     WindowInterface()

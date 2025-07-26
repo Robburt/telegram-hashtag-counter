@@ -53,7 +53,7 @@ class WindowInterface:
         self.root.title("Telegram Hashtag Counter - Alpha")
 
         self.contents = tk.Frame(self.root, border=10)
-        self.tag_info = tk.Frame(self.root)
+        self.tag_info = tk.Frame(self.root, border=20)
 
         self.welcome_label = tk.Label(self.contents, text="Welcome to Telegram Hashtag Counter.\nPlease select a path to the result.json file below.", font=("Arial", 15))
         self.welcome_label.grid(row=0, columnspan=3, pady=20)
@@ -91,6 +91,7 @@ class WindowInterface:
 
     def count(self):
         try:
+            self.counter = Counter()
             self.counter.count(self.results_dir.get())
         except FileNotFoundError:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
@@ -110,23 +111,21 @@ class WindowInterface:
         tag_neighbours_dict = tag.neighbours
         tag_info_labels = []
         for key, value in tag_info_dict.items():
-            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=100))
+            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-        tag_info_labels.append(tk.Label(self.tag_info, text=f"Tags most commonly used with this tag:", width=100))
+        tag_info_labels.append(tk.Label(self.tag_info, text=f"Tags most commonly used with this tag:", width=50, anchor=tk.W))
         tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-        top10 = 10
+        top10 = 15
         for key, value in tag_neighbours_dict.items():
-            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value.uses_amount}", width=100))
+            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value.uses_amount}", width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
             top10 -= 1
             if not top10:
                 break
         if top10 > 0:
             for i in range(top10):
-                tag_info_labels.append(tk.Label(self.tag_info, text=f"    ", width=100))
+                tag_info_labels.append(tk.Label(self.tag_info, text="", width=50, anchor=tk.W))
                 tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-
-
 
     def export_to_xlsx(self):
         try:

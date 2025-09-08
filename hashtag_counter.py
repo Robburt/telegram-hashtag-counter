@@ -2,8 +2,7 @@ import os
 import json
 import xlsxwriter
 import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox, ttk
 
 
 class Table:
@@ -68,7 +67,9 @@ class WindowInterface:
         self.start = tk.Button(self.contents, text="Count", command=self.count, width=20)
         self.start.grid(row=1, column=2, sticky=tk.E)
 
-        self.tag_box = tk.Listbox(self.contents, height=20)
+        self.tag_box = ttk.Treeview(self.contents, height=20, columns="uses")
+        self.tag_box.column("uses", width=30)
+        self.tag_box.heading("uses", text='Usages')
         self.tag_box.grid(row=2, column=0, columnspan=3, sticky=tk.W + tk.E, pady=10)
         self.tag_box_scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.tag_box.yview)
         self.tag_box.configure(yscrollcommand=self.tag_box_scrollbar.set)
@@ -96,16 +97,19 @@ class WindowInterface:
         except FileNotFoundError:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
+
         self.export_button.grid(row=3, column=0, sticky=tk.W)
-        tags = [*self.counter.tags_table.keys()]
-        tags_var = tk.StringVar(value=tags)
-        self.tag_box['listvariable'] = tags_var
-        self.tag_box.bind("<<ListboxSelect>>", lambda e: self.on_selection_change(self.tag_box.curselection()))
-        self.tag_box.selection_set(0)
-        self.on_selection_change(self.tag_box.curselection())
+
+        for tag in self.counter.tags_table.values():
+            table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
+            tag.table_id = table_id
+
+        self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
+        self.tag_box.selection_set("I001")
+        self.on_selection_change(self.tag_box.selection())
 
     def on_selection_change(self, selection):
-        tag = self.counter.tags_table[self.tag_box.get(selection)]
+        tag = self.counter.find_by_id(selection[0])
         tag_info_dict = tag.dictionary
         tag.set_neighbours(self.counter.messages)
         tag_neighbours_dict = tag.neighbours
@@ -236,6 +240,11 @@ class Counter:
             table.print_dict(self.forwards_table, 'Reposted from', 'Reposts amount')
         table.close_workbook()
 
+    def find_by_id(self, table_id):
+        for tag in self.tags_table.values():
+            if tag.table_id == table_id:
+                return tag
+
     class NotCountedException(Exception):
         pass
 
@@ -251,6 +260,7 @@ class Tag:
         self.name = name
         self.uses = []
         self.neighbours = {}
+        self.table_id = ''
 
     @property
     def uses_amount(self):

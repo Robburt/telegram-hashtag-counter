@@ -76,6 +76,15 @@ class WindowInterface:
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
 
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
+        self.export_button.grid(row=3, column=0, sticky=tk.W)
+
+        self.sort_mode = "Usages"
+        self.sort_mode_frame = tk.Frame(self.contents)
+        self.sort_mode_text = tk.Label(self.sort_mode_frame, text="Sorting mode: ", font=("Arial", 10))
+        self.sort_mode_button = tk.Button(self.sort_mode_frame, text=self.sort_mode, command=self.switch_sorting_mode, width=20)
+        self.sort_mode_frame.grid(row=3, column=2, sticky=tk.E)
+        self.sort_mode_text.grid(row=0, column=0, sticky=tk.E)
+        self.sort_mode_button.grid(row=0, column=1, sticky=tk.E)
 
         self.contents.grid(row=0, column=0)
         self.tag_info.grid(row=0, column=1, sticky=tk.N)
@@ -98,11 +107,10 @@ class WindowInterface:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
 
-        self.export_button.grid(row=3, column=0, sticky=tk.W)
-
-        for tag in self.counter.tags_table.values():
+        for n, tag in enumerate(self.counter.tags_table.values()):
             table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
             tag.table_id = table_id
+            tag.table_id_int = n
 
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
         self.tag_box.selection_set("I001")
@@ -138,11 +146,27 @@ class WindowInterface:
         except self.counter.NotCountedException:
             pass
 
+    def switch_sorting_mode(self):
+        if self.sort_mode == 'Usages':
+            self.sort_mode = 'Alphabetically'
+            for tag, tag_alpha in zip(self.counter.tags_table.values(), self.counter.tags_table_alphabetically.values()):
+                self.tag_box.item(tag.table_id, text=tag_alpha.name, values=tag_alpha.uses_amount)
+            for tag_alpha, table_id in zip(self.counter.tags_table_alphabetically.values(), self.tag_box.get_children()):
+                tag_alpha.table_id = table_id
+        else:
+            self.sort_mode = 'Usages'
+            for tag_alpha, tag in zip(self.counter.tags_table_alphabetically.values(), self.counter.tags_table.values()):
+                self.tag_box.item(tag_alpha.table_id, text=tag.name, values=tag.uses_amount)
+            for tag, table_id in zip(self.counter.tags_table.values(), self.tag_box.get_children()):
+                tag.table_id = table_id
+        self.sort_mode_button.configure(text=self.sort_mode)
+
 
 class Counter:
     def __init__(self):
         self.messages = []
         self.tags_table = {}
+        self.tags_table_alphabetically = {}
         self.artists_table = {}
         self.forwards_table = {}
 
@@ -214,6 +238,9 @@ class Counter:
                 else:
                     self.tags_table[tag.name] = tag
 
+        # alphabetically sort tags table
+        self.tags_table_alphabetically = {key: value for key, value in sorted(self.tags_table.items())}
+
 
     def dump(self):
         if not self.tags_table:
@@ -261,6 +288,7 @@ class Tag:
         self.uses = []
         self.neighbours = {}
         self.table_id = ''
+        self.table_id_int = 0
 
     @property
     def uses_amount(self):
@@ -269,6 +297,7 @@ class Tag:
     @property
     def dictionary(self):
         return {
+            'ID': self.table_id,
             'name': self.name,
             'uses': self.uses_amount,
             'first use': self.uses[0],

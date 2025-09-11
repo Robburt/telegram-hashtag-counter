@@ -1,8 +1,10 @@
 import os
 import json
 import xlsxwriter
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from resources import custom
 
 
 class Table:
@@ -124,18 +126,49 @@ class WindowInterface:
         for key, value in tag_info_dict.items():
             tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+
+        # Neighbouring tags
+        displayed_neighbours = 5
+        current_neighbour = 0
         tag_info_labels.append(tk.Label(self.tag_info, text=f"Tags most commonly used with this tag:", width=50, anchor=tk.W))
         tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-        top10 = 15
         for key, value in tag_neighbours_dict.items():
-            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value.uses_amount}", width=50, anchor=tk.W))
+            current_neighbour += 1
+            tag_info_labels.append(tk.Label(self.tag_info, text=f"{current_neighbour} - {key}: {value.uses_amount}", width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-            top10 -= 1
-            if not top10:
+            if current_neighbour == displayed_neighbours:
                 break
-        if top10 > 0:
-            for i in range(top10):
+        if current_neighbour < displayed_neighbours:
+            for i in range(displayed_neighbours - current_neighbour):
                 tag_info_labels.append(tk.Label(self.tag_info, text="", width=50, anchor=tk.W))
+                tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+
+        # Links to last posts
+        displayed_posts = 1
+        current_post = 0
+        tag_info_labels.append(tk.Label(self.tag_info, text=f"Most recent posts:", width=50, anchor=tk.W))
+        tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+        for message in reversed(tag.messages):
+            current_post += 1
+            link = f"https://t.me/c/{self.counter.channel_id}/{message.id}"
+            text = message.text[:30].replace('\n', ' ')
+            if not text:
+                text = link
+            #tk.Label(self.tag_info, text=' '*70).grid(row=len(tag_info_labels), column=0, sticky=tk.W)
+            #tag_info_labels.append(tk.Label(self.tag_info, text=text, fg='blue', cursor='hand2'))
+            #tag_info_labels[-1].pack()
+            #tag_info_labels[-1].bind("<Button-1>", lambda e: webbrowser.open(link))
+            custom.Linkbutton(self.tag_info, text=' '*70).grid(row=len(tag_info_labels), column=0, sticky=tk.W)
+            tag_info_labels.append(custom.Linkbutton(self.tag_info, text=text, command=lambda: webbrowser.open(link)))
+            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+            if current_post == displayed_posts:
+                break
+        if current_post < displayed_posts:
+            for i in range(displayed_posts - current_post):
+                #tag_info_labels.append(tk.Label(self.tag_info, text=" "*70, fg='blue', cursor='hand2'))
+                #tag_info_labels[-1].pack()
+                #tag_info_labels[-1].bind("<Button-1>", lambda e: webbrowser.open(link))
+                tag_info_labels.append(custom.Linkbutton(self.tag_info, text=' '*30))
                 tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
 
     def export_to_xlsx(self):
@@ -163,6 +196,7 @@ class WindowInterface:
 
 class Counter:
     def __init__(self):
+        self.channel_id = 0
         self.messages = []
         self.tags_table = {}
         self.tags_table_alphabetically = {}
@@ -170,33 +204,39 @@ class Counter:
         self.forwards_table = {}
 
     def count(self, directory):
-        def add_to_upt(appended_tag, current_message):
-            use_date = current_message['date']
+        def add_to_upt(appended_tag, message):
+            use_date = message.date
             if appended_tag not in uses_per_tag.keys():
                 uses_per_tag[appended_tag] = Tag(appended_tag)
             uses_per_tag[appended_tag].increment(use_date)
+            uses_per_tag[appended_tag].messages.append(message)
 
         with open(directory, encoding='utf-8') as file:
             results = json.load(file)
+        self.channel_id = results['id']
 
         uses_per_tag = {}
         artists = []
         forwards = []
-        for message in results['messages']:
-            if message['type'] == "message":
+        for msg_json in results['messages']:
+            if msg_json['type'] == "message":
                 next_is_artist = False
 
-                if 'forwarded_from' in message.keys():
-                    source = message['forwarded_from']
+                message = Message(msg_json['id'], msg_json['date'])
+                if 'forwarded_from' in msg_json.keys():
+                    source = msg_json['forwarded_from']
                     if source is None:
                         source = 'Deleted account'
+                    message.add_source(source)
                     add_to_upt(source, message)
                     forwards.append(source)
                 else:
                     artist = None
                     tags = []
-                    for text_entity in message['text_entities']:
+                    for text_entity in msg_json['text_entities']:
+
                         if text_entity['type'] == 'plain':
+                            message.add_text(text_entity['text'])
                             if text_entity['text'][-3:] == "by ":
                                 next_is_artist = True
 
@@ -217,7 +257,10 @@ class Counter:
 
                     if artist is not None:
                         artists.append(artist)
-                    self.messages.append(Message(message['id'], message['date'], artist, tags))
+                    message.add_artist(artist)
+                    message.add_tags(tags)
+                    self.messages.append(message)
+
 
         max_uses = max(list(i.uses_amount for i in uses_per_tag.values()))
         tags_per_uses = {str(i): [] for i in range(max_uses, 0, -1)}
@@ -275,16 +318,31 @@ class Counter:
         pass
 
 class Message:
-    def __init__(self, msg_id, date, author, tags):
+    def __init__(self, msg_id, date):
         self.id = msg_id
         self.date = date
-        self.author = author
+        self.text = ''
+        self.author = None
+        self.tags = None
+        self.source = None
+
+    def add_source(self, source):
+        self.source = source
+
+    def add_artist(self, artist):
+        self.author = artist
+
+    def add_tags(self, tags):
         self.tags = tags
+
+    def add_text(self, text):
+        self.text += text
 
 class Tag:
     def __init__(self, name):
         self.name = name
         self.uses = []
+        self.messages = []
         self.neighbours = {}
         self.table_id = ''
 

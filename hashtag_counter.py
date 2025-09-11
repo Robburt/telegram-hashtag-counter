@@ -118,30 +118,26 @@ class WindowInterface:
         self.on_selection_change(self.tag_box.selection())
 
     def on_selection_change(self, selection):
-        tag = self.counter.find_by_id(selection[0])
-        tag_info_dict = tag.dictionary
-        tag.set_neighbours(self.counter.messages)
-        tag_neighbours_dict = tag.neighbours
-        tag_info_labels = []
-        for key, value in tag_info_dict.items():
-            tag_info_labels.append(tk.Label(self.tag_info, text=f"{key}: {value}", width=50, anchor=tk.W))
+        def line(text):
+            tag_info_labels.append(tk.Label(self.tag_info, text=text, width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
 
+        tag = self.counter.find_by_id(selection[0])
+        tag_info_labels = []
+        for key, value in tag.dictionary.items():
+            line(f"{key}: {value}")
+
         # Neighbouring tags
+        line(f"Tags most commonly used with this tag:")
+        if not tag.has_defined_neighbours:
+            tag.set_neighbours(self.counter.messages)
         displayed_neighbours = 5
-        current_neighbour = 0
-        tag_info_labels.append(tk.Label(self.tag_info, text=f"Tags most commonly used with this tag:", width=50, anchor=tk.W))
-        tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-        for key, value in tag_neighbours_dict.items():
-            current_neighbour += 1
-            tag_info_labels.append(tk.Label(self.tag_info, text=f"{current_neighbour} - {key}: {value.uses_amount}", width=50, anchor=tk.W))
-            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-            if current_neighbour == displayed_neighbours:
-                break
-        if current_neighbour < displayed_neighbours:
-            for i in range(displayed_neighbours - current_neighbour):
-                tag_info_labels.append(tk.Label(self.tag_info, text="", width=50, anchor=tk.W))
-                tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+        for n, key in zip(range(displayed_neighbours), tag.neighbours.keys()):
+            line(f"{n + 1} - {key}: {tag.neighbours[key].uses_amount}")
+        blank_lines_amount = displayed_neighbours - len(tag.neighbours.keys())
+        if blank_lines_amount > 0:
+            for _ in range(blank_lines_amount):
+                line("")
 
         # Links to last posts
         displayed_posts = 1
@@ -359,6 +355,10 @@ class Tag:
             'first use': self.uses[0],
             'last use': self.uses[-1]
         }
+
+    @property
+    def has_defined_neighbours(self):
+        return len(self.neighbours) > 0
 
     def increment(self, use_date):
         self.uses.append(use_date)

@@ -175,18 +175,18 @@ class WindowInterface:
             pass
 
     def switch_sorting_mode(self):
+        def switch_sorting(table1, table2):
+            for tag1, tag2 in zip(table1.values(), table2.values()):
+                self.tag_box.item(tag1.table_id, text=tag2.name, values=tag2.uses_amount)
+            for tag2, table_id in zip(table2.values(), self.tag_box.get_children()):
+                tag2.table_id = table_id
+
         if self.sort_mode == 'Usages':
             self.sort_mode = 'Alphabetically'
-            for tag, tag_alpha in zip(self.counter.tags_table.values(), self.counter.tags_table_alphabetically.values()):
-                self.tag_box.item(tag.table_id, text=tag_alpha.name, values=tag_alpha.uses_amount)
-            for tag_alpha, table_id in zip(self.counter.tags_table_alphabetically.values(), self.tag_box.get_children()):
-                tag_alpha.table_id = table_id
+            switch_sorting(self.counter.tags_table, self.counter.tags_table_alphabetically)
         else:
             self.sort_mode = 'Usages'
-            for tag_alpha, tag in zip(self.counter.tags_table_alphabetically.values(), self.counter.tags_table.values()):
-                self.tag_box.item(tag_alpha.table_id, text=tag.name, values=tag.uses_amount)
-            for tag, table_id in zip(self.counter.tags_table.values(), self.tag_box.get_children()):
-                tag.table_id = table_id
+            switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
         self.sort_mode_button.configure(text=self.sort_mode)
 
 
@@ -201,11 +201,9 @@ class Counter:
 
     def count(self, directory):
         def add_to_upt(appended_tag, message):
-            use_date = message.date
             if appended_tag not in uses_per_tag.keys():
                 uses_per_tag[appended_tag] = Tag(appended_tag)
-            uses_per_tag[appended_tag].increment(use_date)
-            uses_per_tag[appended_tag].messages.append(message)
+            uses_per_tag[appended_tag].add_message(message)
 
         with open(directory, encoding='utf-8') as file:
             results = json.load(file)
@@ -337,14 +335,13 @@ class Message:
 class Tag:
     def __init__(self, name):
         self.name = name
-        self.uses = []
         self.messages = []
         self.neighbours = {}
         self.table_id = ''
 
     @property
     def uses_amount(self):
-        return len(self.uses)
+        return len(self.messages)
 
     @property
     def dictionary(self):
@@ -352,29 +349,29 @@ class Tag:
             'ID': self.table_id,
             'name': self.name,
             'uses': self.uses_amount,
-            'first use': self.uses[0],
-            'last use': self.uses[-1]
+            'first use': self.messages[0].date,
+            'last use': self.messages[-1].date
         }
 
     @property
     def has_defined_neighbours(self):
         return len(self.neighbours) > 0
 
-    def increment(self, use_date):
-        self.uses.append(use_date)
+    def add_message(self, message):
+        self.messages.append(message)
 
     def set_neighbours(self, messages):
-        def add_to_upt(appended_tag, message_date):
+        def add_to_upt(appended_tag, message):
             if appended_tag not in uses_per_tag.keys():
                 uses_per_tag[appended_tag] = Tag(appended_tag)
-            uses_per_tag[appended_tag].increment(message_date)
+            uses_per_tag[appended_tag].add_message(message)
 
         uses_per_tag = {}
         for message in messages:
             if self.name in message.tags:
                 for tag in message.tags:
                     if tag != self.name:
-                        add_to_upt(tag, message.date)
+                        add_to_upt(tag, message)
 
         if not uses_per_tag:
             return

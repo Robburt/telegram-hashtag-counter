@@ -84,6 +84,7 @@ class WindowInterface:
         self.sort_mode_frame = tk.Frame(self.contents)
         self.sort_mode_text = tk.Label(self.sort_mode_frame, text="Sorting mode: ", font=("Arial", 10))
         self.sort_mode_button = tk.Button(self.sort_mode_frame, text=self.sort_mode, command=self.switch_sorting_mode, width=20)
+        self.sort_mode_button['state'] = 'disabled'
         self.sort_mode_frame.grid(row=3, column=2, sticky=tk.E)
         self.sort_mode_text.grid(row=0, column=0, sticky=tk.E)
         self.sort_mode_button.grid(row=0, column=1, sticky=tk.E)
@@ -116,6 +117,8 @@ class WindowInterface:
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
         self.tag_box.selection_set("I001")
         self.on_selection_change(self.tag_box.selection())
+
+        self.sort_mode_button['state'] = 'normal'
 
     def on_selection_change(self, selection):
         def line(text):

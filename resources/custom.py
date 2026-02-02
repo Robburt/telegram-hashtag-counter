@@ -1,5 +1,12 @@
+import tkinter as tk
 from tkinter import ttk
 from tkinter.font import Font, nametofont
+
+class TreeBox:
+    def __init__(self, root):
+        self.box = ttk.Treeview(root)
+        self.scrollbar = tk.Scrollbar(root, orient=tk.VERTICAL, command=self.box.yview)
+        self.box.configure(yscrollcommand=self.scrollbar.set)
 
 class Linkbutton(ttk.Button):
 

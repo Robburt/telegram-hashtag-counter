@@ -44,7 +44,6 @@ class Table:
     def close_workbook(self):
         self.workbook.close()
 
-
 class WindowInterface:
     def __init__(self):
 
@@ -76,6 +75,12 @@ class WindowInterface:
         self.tag_box_scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.tag_box.yview)
         self.tag_box.configure(yscrollcommand=self.tag_box_scrollbar.set)
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
+
+        self.treeview_neighbours = ttk.Treeview(self.tag_info, columns="uses")
+        self.treeview_neighbours.column("uses", width=10)
+        self.treeview_neighbours.heading("uses", text='Usages')
+        self.treeview_neighbours_scrollbar = tk.Scrollbar(self.tag_info, orient=tk.VERTICAL, command=self.treeview_neighbours.yview)
+        self.treeview_neighbours.configure(yscrollcommand=self.treeview_neighbours_scrollbar.set)
 
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
         self.export_button.grid(row=3, column=0, sticky=tk.W)
@@ -123,25 +128,27 @@ class WindowInterface:
     def on_selection_change(self, selection):
         def line(text):
             tag_info_labels.append(tk.Label(self.tag_info, text=text, width=50, anchor=tk.W))
-            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+            tag_info_labels[-1].grid(row=len(tag_info_labels)-1 + additional_rows, column=0, sticky=tk.W)
 
         tag = self.counter.find_by_id(selection[0])
         tag_info_labels = []
+        additional_rows = 0
         for key, value in tag.dictionary.items():
             line(f"{key}: {value}")
 
         # Neighbouring tags
         line(f"Tags most commonly used with this tag:")
+        additional_rows += 1
+        for row in self.treeview_neighbours.get_children():
+            self.treeview_neighbours.delete(row)
+        self.treeview_neighbours.grid(row=len(tag_info_labels), column=0, sticky=tk.W + tk.E)
+        self.treeview_neighbours_scrollbar.grid(row=len(tag_info_labels), column=1, sticky=tk.N + tk.S, pady=10)
         if not tag.has_defined_neighbours:
             tag.set_neighbours(self.counter.messages)
-        displayed_neighbours = 5
-        for n, key in zip(range(displayed_neighbours), tag.neighbours.keys()):
-            line(f"{n + 1} - {key}: {tag.neighbours[key].uses_amount}")
-        blank_lines_amount = displayed_neighbours - len(tag.neighbours.keys())
-        if blank_lines_amount > 0:
-            for _ in range(blank_lines_amount):
-                line("")
+        for key in tag.neighbours.keys():
+            self.treeview_neighbours.insert('', 'end', text=key, values=tag.neighbours[key].uses_amount)
 
+        """
         # Links to last posts
         displayed_posts = 1
         current_post = 0
@@ -169,6 +176,7 @@ class WindowInterface:
                 #tag_info_labels[-1].bind("<Button-1>", lambda e: webbrowser.open(link))
                 tag_info_labels.append(custom.Linkbutton(self.tag_info, text=' '*30))
                 tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
+                """
 
     def export_to_xlsx(self):
         try:
@@ -191,7 +199,6 @@ class WindowInterface:
             self.sort_mode = 'Usages'
             switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
         self.sort_mode_button.configure(text=self.sort_mode)
-
 
 class Counter:
     def __init__(self):
@@ -297,6 +304,7 @@ class Counter:
 
         table = Table()
         table.print_dict(self.tags_table, 'Tag', 'Tag uses')
+        table.print_dict({key: value for key, value in sorted(self.tags_table.items())}, 'Alphabetic tags', 'Tag uses')
         table.print_dict(additional_information, '', '')
         table.print_groups(self.tags_table)
         if self.artists_table:

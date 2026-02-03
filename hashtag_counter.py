@@ -48,7 +48,7 @@ class WindowInterface:
         self.counter = Counter()
 
         self.root = tk.Tk()
-        self.root.title("Telegram Hashtag Counter - Alpha")
+        self.root.title("Telegram Hashtag Counter")
 
         self.contents = tk.Frame(self.root, border=10)
         self.tag_info = tk.Frame(self.root, border=20)
@@ -77,7 +77,7 @@ class WindowInterface:
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
 
-        self.treeview_neighbours = ttk.Treeview(self.tag_info, columns="uses")
+        self.treeview_neighbours = ttk.Treeview(self.tag_info, columns="uses", height=20)
         self.treeview_neighbours.column("uses", width=10)
         self.treeview_neighbours.heading("uses", text='Usages')
         self.treeview_neighbours_scrollbar = tk.Scrollbar(self.tag_info, orient=tk.VERTICAL, command=self.treeview_neighbours.yview)

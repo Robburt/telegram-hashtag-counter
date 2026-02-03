@@ -57,11 +57,18 @@ class WindowInterface:
         self.welcome_label.grid(row=0, columnspan=3, pady=20)
 
         self.results_dir = tk.StringVar()
-        self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=70)
+        self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=60)
         self.directory_entry.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
 
         self.directory_browse = tk.Button(self.contents, text="Open...", command=self.show_browse_window, width=20)
         self.directory_browse.grid(row=1, column=1, sticky=tk.W, padx=5)
+
+        self.search_frame = tk.Frame(self.contents)
+        self.search_bar = tk.Entry(self.search_frame)
+        self.search_button = tk.Button(self.search_frame, text="Search", command=self.search, width=10)
+        self.search_frame.grid(row=1, column=2, sticky=tk.E)
+        self.search_bar.grid(row=0, column=0, sticky=tk.E, padx=10)
+        self.search_button.grid(row=0, column=1, sticky=tk.E)
 
         self.tag_box = ttk.Treeview(self.contents, height=20, columns="uses")
         self.tag_box.column("uses", width=30)
@@ -132,14 +139,26 @@ class WindowInterface:
         # Neighbouring tags
         line(f"Tags most commonly used with this tag:")
         additional_rows += 1
-        for row in self.treeview_neighbours.get_children():
-            self.treeview_neighbours.delete(row)
+        self.treeview_neighbours.delete(*self.treeview_neighbours.get_children())
         self.treeview_neighbours.grid(row=len(tag_info_labels), column=0, sticky=tk.W + tk.E)
         self.treeview_neighbours_scrollbar.grid(row=len(tag_info_labels), column=1, sticky=tk.N + tk.S, pady=10)
         if not tag.has_defined_neighbours:
             tag.set_neighbours(self.counter.messages)
         for key in tag.neighbours.keys():
             self.treeview_neighbours.insert('', 'end', text=key, values=tag.neighbours[key].uses_amount)
+
+    def search(self):
+        if self.search_bar.get() == '':
+            return
+        found_anything = False
+        for tag in self.counter.tags_table.values():
+            if self.search_bar.get() in tag.name:
+                if not found_anything:
+                    self.tag_box.delete(*self.tag_box.get_children())
+                found_anything = True
+                table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
+                tag.table_id = table_id
+        self.tag_box.selection_set(self.tag_box.get_children()[0])
 
     def export_to_xlsx(self):
         try:
@@ -162,6 +181,7 @@ class WindowInterface:
             self.sort_mode = 'Usages'
             switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
         self.sort_mode_button.configure(text=self.sort_mode)
+        self.tag_box.selection_set(self.tag_box.get_children()[0])
 
 class Counter:
     def __init__(self):

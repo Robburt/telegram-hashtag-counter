@@ -321,6 +321,9 @@ class Message:
         self.tags = None
         self.source = None
 
+    def __repr__(self):
+        return f"Message {self.date} '{self.text[:70]}...'"
+
     def add_source(self, source):
         self.source = source
 
@@ -339,6 +342,9 @@ class Tag:
         self.messages = []
         self.neighbours = {}
         self.table_id = ''
+
+    def __repr__(self):
+        return f"Tag object '{self.name}'"
 
     @property
     def uses_amount(self):
@@ -370,9 +376,12 @@ class Tag:
         uses_per_tag = {}
         for message in messages:
             if self.name in message.tags:
-                for tag in message.tags:
-                    if tag != self.name:
-                        add_to_upt(tag, message)
+                if len(message.tags) == 1:
+                    add_to_upt("/Used alone/", message)
+                else:
+                    for tag in message.tags:
+                        if tag != self.name:
+                            add_to_upt(tag, message)
 
         if not uses_per_tag:
             return

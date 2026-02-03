@@ -137,24 +137,22 @@ class WindowInterface:
     def on_selection_change(self, selection):
         def line(text):
             tag_info_labels.append(tk.Label(self.tag_info, text=text, width=50, anchor=tk.W))
-            tag_info_labels[-1].grid(row=len(tag_info_labels)-1 + additional_rows, column=0, sticky=tk.W)
+            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
 
         tag = self.counter.find_by_id(selection[0])
         tag_info_labels = []
-        additional_rows = 0
         for key, value in tag.dictionary.items():
             line(f"{key}: {value}")
 
         # Neighbouring tags
         line(f"Tags most commonly used with this tag:")
-        additional_rows += 1
         self.treeview_neighbours.delete(*self.treeview_neighbours.get_children())
         self.treeview_neighbours.grid(row=len(tag_info_labels), column=0, sticky=tk.W + tk.E)
         self.treeview_neighbours_scrollbar.grid(row=len(tag_info_labels), column=1, sticky=tk.N + tk.S, pady=10)
         if not tag.has_defined_neighbours:
             tag.set_neighbours(self.counter.messages)
-        for key in tag.neighbours.keys():
-            self.treeview_neighbours.insert('', 'end', text=key, values=tag.neighbours[key].uses_amount)
+        for neighbour in tag.neighbours.values():
+            self.treeview_neighbours.insert('', 'end', text=neighbour.name, values=neighbour.uses_amount)
 
     def search(self):
         if self.search_bar.get() == '':

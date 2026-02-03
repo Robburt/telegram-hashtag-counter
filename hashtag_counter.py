@@ -1,10 +1,8 @@
 import os
 import json
 import xlsxwriter
-import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from resources import custom
 
 
 class Table:
@@ -62,11 +60,8 @@ class WindowInterface:
         self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=70)
         self.directory_entry.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
 
-        self.directory_browse = tk.Button(self.contents, text="Browse...", command=self.show_browse_window)
+        self.directory_browse = tk.Button(self.contents, text="Open...", command=self.show_browse_window, width=20)
         self.directory_browse.grid(row=1, column=1, sticky=tk.W, padx=5)
-
-        self.start = tk.Button(self.contents, text="Count", command=self.count, width=20)
-        self.start.grid(row=1, column=2, sticky=tk.E)
 
         self.tag_box = ttk.Treeview(self.contents, height=20, columns="uses")
         self.tag_box.column("uses", width=30)
@@ -106,8 +101,6 @@ class WindowInterface:
         results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
         if results_dir is not None:
             self.results_dir.set(results_dir.name)
-
-    def count(self):
         try:
             self.counter = Counter()
             self.counter.count(self.results_dir.get())
@@ -147,36 +140,6 @@ class WindowInterface:
             tag.set_neighbours(self.counter.messages)
         for key in tag.neighbours.keys():
             self.treeview_neighbours.insert('', 'end', text=key, values=tag.neighbours[key].uses_amount)
-
-        """
-        # Links to last posts
-        displayed_posts = 1
-        current_post = 0
-        tag_info_labels.append(tk.Label(self.tag_info, text=f"Most recent posts:", width=50, anchor=tk.W))
-        tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-        for message in reversed(tag.messages):
-            current_post += 1
-            link = f"https://t.me/c/{self.counter.channel_id}/{message.id}"
-            text = message.text[:30].replace('\n', ' ')
-            if not text:
-                text = link
-            #tk.Label(self.tag_info, text=' '*70).grid(row=len(tag_info_labels), column=0, sticky=tk.W)
-            #tag_info_labels.append(tk.Label(self.tag_info, text=text, fg='blue', cursor='hand2'))
-            #tag_info_labels[-1].pack()
-            #tag_info_labels[-1].bind("<Button-1>", lambda e: webbrowser.open(link))
-            custom.Linkbutton(self.tag_info, text=' '*70).grid(row=len(tag_info_labels), column=0, sticky=tk.W)
-            tag_info_labels.append(custom.Linkbutton(self.tag_info, text=text, command=lambda: webbrowser.open(link)))
-            tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-            if current_post == displayed_posts:
-                break
-        if current_post < displayed_posts:
-            for i in range(displayed_posts - current_post):
-                #tag_info_labels.append(tk.Label(self.tag_info, text=" "*70, fg='blue', cursor='hand2'))
-                #tag_info_labels[-1].pack()
-                #tag_info_labels[-1].bind("<Button-1>", lambda e: webbrowser.open(link))
-                tag_info_labels.append(custom.Linkbutton(self.tag_info, text=' '*30))
-                tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
-                """
 
     def export_to_xlsx(self):
         try:

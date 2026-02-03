@@ -59,9 +59,8 @@ class WindowInterface:
         self.results_dir = tk.StringVar()
         self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=60)
         self.directory_entry.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-
-        self.directory_browse = tk.Button(self.contents, text="Open...", command=self.show_browse_window, width=20)
-        self.directory_browse.grid(row=1, column=1, sticky=tk.W, padx=5)
+        self.open_dir = tk.Button(self.contents, text="Open...", command=self.open_file_command, width=20)
+        self.open_dir.grid(row=1, column=1, sticky=tk.W, padx=5)
 
         self.search_frame = tk.Frame(self.contents)
         self.search_bar = tk.Entry(self.search_frame)
@@ -77,6 +76,7 @@ class WindowInterface:
         self.tag_box_scrollbar = tk.Scrollbar(self.contents, orient=tk.VERTICAL, command=self.tag_box.yview)
         self.tag_box.configure(yscrollcommand=self.tag_box_scrollbar.set)
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
+        self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
 
         self.treeview_neighbours = ttk.Treeview(self.tag_info, columns="uses")
         self.treeview_neighbours.column("uses", width=10)
@@ -102,12 +102,17 @@ class WindowInterface:
         self.root.update_idletasks()
         self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
 
+        try:
+            with open("lastdir.txt", "r") as f:
+                results_dir = f.read()
+                self.results_dir.set(results_dir)
+            self.launch_count()
+        except FileNotFoundError:
+            pass
+
         self.root.mainloop()
 
-    def show_browse_window(self):
-        results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
-        if results_dir is not None:
-            self.results_dir.set(results_dir.name)
+    def launch_count(self):
         try:
             self.counter = Counter()
             self.counter.count(self.results_dir.get())
@@ -115,15 +120,22 @@ class WindowInterface:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
 
+        self.tag_box.delete(*self.tag_box.get_children())
         for tag in self.counter.tags_table.values():
             table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
             tag.table_id = table_id
-
-        self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
-        self.tag_box.selection_set("I001")
-        self.on_selection_change(self.tag_box.selection())
+        self.tag_box.selection_set(self.tag_box.get_children()[0])
 
         self.sort_mode_button['state'] = 'normal'
+
+    def open_file_command(self):
+        results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
+        if results_dir is None:
+            return
+        self.results_dir.set(results_dir.name)
+        with open("lastdir.txt", "w") as f:
+            f.write(results_dir.name)
+        self.launch_count()
 
     def on_selection_change(self, selection):
         def line(text):

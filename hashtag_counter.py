@@ -56,11 +56,9 @@ class WindowInterface:
         self.welcome_label = tk.Label(self.contents, text="Welcome to Telegram Hashtag Counter.\nPlease select a path to the result.json file below.", font=("Arial", 15))
         self.welcome_label.grid(row=0, columnspan=3, pady=20)
 
-        self.results_dir = tk.StringVar()
-        self.directory_entry = tk.Entry(self.contents, textvariable=self.results_dir, width=60)
-        self.directory_entry.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.results_dir = ''
         self.open_dir = tk.Button(self.contents, text="Open...", command=self.open_file_command, width=20)
-        self.open_dir.grid(row=1, column=1, sticky=tk.W, padx=5)
+        self.open_dir.grid(row=1, column=0, sticky=tk.W, padx=5)
 
         self.search_frame = tk.Frame(self.contents)
         self.search_bar = tk.Entry(self.search_frame)
@@ -104,8 +102,7 @@ class WindowInterface:
 
         try:
             with open("lastdir.txt", "r") as f:
-                results_dir = f.read()
-                self.results_dir.set(results_dir)
+                self.results_dir = f.read()
             self.launch_count()
         except FileNotFoundError:
             pass
@@ -115,7 +112,7 @@ class WindowInterface:
     def launch_count(self):
         try:
             self.counter = Counter()
-            self.counter.count(self.results_dir.get())
+            self.counter.count(self.results_dir)
         except FileNotFoundError:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
@@ -132,7 +129,7 @@ class WindowInterface:
         results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
         if results_dir is None:
             return
-        self.results_dir.set(results_dir.name)
+        self.results_dir = results_dir.name
         with open("lastdir.txt", "w") as f:
             f.write(results_dir.name)
         self.launch_count()

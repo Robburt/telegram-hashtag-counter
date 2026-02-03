@@ -60,6 +60,7 @@ class WindowInterface:
         self.open_dir = tk.Button(self.contents, text="Open...", command=self.open_file_command, width=20)
         self.open_dir.grid(row=1, column=0, sticky=tk.W, padx=5)
 
+        self.displaying_full_table = True
         self.search_frame = tk.Frame(self.contents)
         self.search_bar = tk.Entry(self.search_frame)
         self.search_button = tk.Button(self.search_frame, text="Search", command=self.search, width=10)
@@ -155,8 +156,9 @@ class WindowInterface:
             self.treeview_neighbours.insert('', 'end', text=neighbour.name, values=neighbour.uses_amount)
 
     def search(self):
-        if self.search_bar.get() == '':
+        if self.search_bar.get() == '' and self.displaying_full_table:
             return
+        self.displaying_full_table = self.search_bar.get() == ''
         found_anything = False
         for tag in self.counter.tags_table.values():
             if self.search_bar.get() in tag.name:

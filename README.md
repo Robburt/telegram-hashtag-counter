@@ -1,6 +1,6 @@
 # telegram-hashtag-counter
-Generates an Excel spreadsheet with amount of every used hashtag from the exported history of a telegram channel
+Generates a comprehensive spreadsheet with information on all tags used in your Telegram channel of choice. Said data can then be exported to an Excel spreadsheet.
 
 ## Dependencies
 - xlsxwriter
-- BeautifulSoup4
+- tkinter

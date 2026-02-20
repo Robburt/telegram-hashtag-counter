@@ -82,6 +82,11 @@ class WindowInterface:
         self.treeview_neighbours.heading("uses", text='Usages')
         self.treeview_neighbours_scrollbar = tk.Scrollbar(self.tag_info, orient=tk.VERTICAL, command=self.treeview_neighbours.yview)
         self.treeview_neighbours.configure(yscrollcommand=self.treeview_neighbours_scrollbar.set)
+        self.neighbour_view_ids = {}
+
+        self.popup_menu = tk.Menu(self.root, tearoff=0)
+        self.popup_menu.add_command(label="Go to tag", command=self.go_to_tag)
+        self.treeview_neighbours.bind("<Button-3>", self.popup)
 
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
         self.export_button.grid(row=3, column=0, sticky=tk.W)
@@ -152,8 +157,10 @@ class WindowInterface:
         self.treeview_neighbours_scrollbar.grid(row=len(tag_info_labels), column=1, sticky=tk.N + tk.S, pady=10)
         if not tag.has_defined_neighbours:
             tag.set_neighbours(self.counter.messages)
+        self.neighbour_view_ids = {i : '' for i in tag.neighbours.keys()}
         for neighbour in tag.neighbours.values():
-            self.treeview_neighbours.insert('', 'end', text=neighbour.name, values=neighbour.uses_amount)
+            neighbour_id = self.treeview_neighbours.insert('', 'end', text=neighbour.name, values=neighbour.uses_amount)
+            self.neighbour_view_ids[neighbour.name] = neighbour_id
 
     def search(self):
         if self.search_bar.get() == '' and self.displaying_full_table:
@@ -168,6 +175,22 @@ class WindowInterface:
                 table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
                 tag.table_id = table_id
         self.tag_box.selection_set(self.tag_box.get_children()[0])
+
+    def popup(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
+
+    def go_to_tag(self):
+        if len(self.treeview_neighbours.selection()) == 0:
+            return
+        table_id = self.treeview_neighbours.selection()[0]
+        for tag, neighbour_id in self.neighbour_view_ids.items():
+            if neighbour_id == table_id:
+                self.search_bar.delete(0, tk.END)
+                self.search_bar.insert(0, tag)
+                self.search()
 
     def export_to_xlsx(self):
         try:

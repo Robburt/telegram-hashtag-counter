@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 
 class Menubar(tk.Menu):
     def __init__(self, parent, *args, **kwargs):
@@ -57,3 +58,16 @@ class SearchBar(tk.Frame):
     def set_query(self, query):
         self.searchbar.delete(0, tk.END)
         self.searchbar.insert(0, query)
+
+class FlavouredTreeView(ttk.Treeview):
+    def __init__(self, parent, *args, **kwargs):
+        ttk.Treeview.__init__(self, parent, *args, **kwargs)
+
+    def insert_tag(self, tag):
+        return self.insert('', 'end', text=tag.name, values=tag.uses_amount)
+
+    def clear(self):
+        self.delete(*self.get_children())
+
+    def reset_selection(self):
+        self.selection_set(self.get_children()[0])

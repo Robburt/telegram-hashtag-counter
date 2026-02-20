@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 from modules import UI, Counter
 
 class WindowInterface:
@@ -28,7 +28,7 @@ class WindowInterface:
         self.searchbar.bind_command(self.search)
         self.searchbar.grid(row=1, column=2, sticky=tk.E)
 
-        self.tag_box = ttk.Treeview(self.contents, height=20, columns="uses")
+        self.tag_box = UI.FlavouredTreeView(self.contents, height=20, columns="uses")
         self.tag_box.column("uses", width=30)
         self.tag_box.heading("uses", text='Usages')
         self.tag_box.grid(row=2, column=0, columnspan=3, sticky=tk.W + tk.E, pady=10)
@@ -37,7 +37,7 @@ class WindowInterface:
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
 
-        self.treeview_neighbours = ttk.Treeview(self.tag_info, columns="uses", height=20)
+        self.treeview_neighbours = UI.FlavouredTreeView(self.tag_info, columns="uses", height=20)
         self.treeview_neighbours.column("uses", width=10)
         self.treeview_neighbours.heading("uses", text='Usages')
         self.treeview_neighbours_scrollbar = tk.Scrollbar(self.tag_info, orient=tk.VERTICAL, command=self.treeview_neighbours.yview)
@@ -78,11 +78,11 @@ class WindowInterface:
             messagebox.showerror(title="File not found", message="Unable to find result.json file")
             return
 
-        self.tag_box.delete(*self.tag_box.get_children())
+        self.tag_box.clear()
         for tag in self.counter.tags_table.values():
-            table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
+            table_id = self.tag_box.insert_tag(tag)
             tag.table_id = table_id
-        self.tag_box.selection_set(self.tag_box.get_children()[0])
+        self.tag_box.reset_selection()
 
         self.sorting_switch.button_enable()
 
@@ -107,14 +107,14 @@ class WindowInterface:
 
         # Neighbouring tags
         line(f"Tags most commonly used with this tag:")
-        self.treeview_neighbours.delete(*self.treeview_neighbours.get_children())
+        self.treeview_neighbours.clear()
         self.treeview_neighbours.grid(row=len(tag_info_labels), column=0, sticky=tk.W + tk.E)
         self.treeview_neighbours_scrollbar.grid(row=len(tag_info_labels), column=1, sticky=tk.N + tk.S, pady=10)
         if not tag.has_defined_neighbours:
             tag.set_neighbours(self.counter.messages)
         self.neighbour_view_ids = {i : '' for i in tag.neighbours.keys()}
         for neighbour in tag.neighbours.values():
-            neighbour_id = self.treeview_neighbours.insert('', 'end', text=neighbour.name, values=neighbour.uses_amount)
+            neighbour_id = self.treeview_neighbours.insert_tag(neighbour)
             self.neighbour_view_ids[neighbour.name] = neighbour_id
 
     def search(self):
@@ -125,11 +125,11 @@ class WindowInterface:
         for tag in self.counter.tags_table.values():
             if self.searchbar.query in tag.name:
                 if not found_anything:
-                    self.tag_box.delete(*self.tag_box.get_children())
+                    self.tag_box.clear()
                 found_anything = True
-                table_id = self.tag_box.insert('', 'end', text=tag.name, values=tag.uses_amount)
+                table_id = self.tag_box.insert_tag(tag)
                 tag.table_id = table_id
-        self.tag_box.selection_set(self.tag_box.get_children()[0])
+        self.tag_box.reset_selection()
 
     def popup(self, event):
         try:
@@ -166,7 +166,7 @@ class WindowInterface:
             case "Alphabetically":
                 switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
         self.sorting_switch.switch_mode()
-        self.tag_box.selection_set(self.tag_box.get_children()[0])
+        self.tag_box.reset_selection()
 
 if __name__ == "__main__":
     WindowInterface()

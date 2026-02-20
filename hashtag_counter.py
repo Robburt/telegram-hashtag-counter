@@ -118,15 +118,12 @@ class WindowInterface:
             self.neighbour_view_ids[neighbour.name] = neighbour_id
 
     def search(self):
-        if self.searchbar.displaying_full_table and self.searchbar.query == '':
+        if self.searchbar.same_query:
             return
-        self.searchbar.resolve_displaying_full_table()
-        found_anything = False
+        self.searchbar.save_query()
+        self.tag_box.clear()
         for tag in self.counter.tags_table.values():
             if self.searchbar.query in tag.name:
-                if not found_anything:
-                    self.tag_box.clear()
-                found_anything = True
                 table_id = self.tag_box.insert_tag(tag)
                 tag.table_id = table_id
         self.tag_box.reset_selection()

@@ -24,13 +24,9 @@ class WindowInterface:
         self.open_dir = tk.Button(self.contents, text="Open...", command=self.open_file_command, width=20)
         self.open_dir.grid(row=1, column=0, sticky=tk.W, padx=5)
 
-        self.displaying_full_table = True
-        self.search_frame = tk.Frame(self.contents)
-        self.search_bar = tk.Entry(self.search_frame)
-        self.search_button = tk.Button(self.search_frame, text="Search", command=self.search, width=10)
-        self.search_frame.grid(row=1, column=2, sticky=tk.E)
-        self.search_bar.grid(row=0, column=0, sticky=tk.E, padx=10)
-        self.search_button.grid(row=0, column=1, sticky=tk.E)
+        self.searchbar = UI.SearchBar(self.contents)
+        self.searchbar.bind_command(self.search)
+        self.searchbar.grid(row=1, column=2, sticky=tk.E)
 
         self.tag_box = ttk.Treeview(self.contents, height=20, columns="uses")
         self.tag_box.column("uses", width=30)
@@ -122,12 +118,12 @@ class WindowInterface:
             self.neighbour_view_ids[neighbour.name] = neighbour_id
 
     def search(self):
-        if self.search_bar.get() == '' and self.displaying_full_table:
+        if self.searchbar.displaying_full_table and self.searchbar.query == '':
             return
-        self.displaying_full_table = self.search_bar.get() == ''
+        self.searchbar.resolve_displaying_full_table()
         found_anything = False
         for tag in self.counter.tags_table.values():
-            if self.search_bar.get() in tag.name:
+            if self.searchbar.query in tag.name:
                 if not found_anything:
                     self.tag_box.delete(*self.tag_box.get_children())
                 found_anything = True
@@ -147,8 +143,7 @@ class WindowInterface:
         table_id = self.treeview_neighbours.selection()[0]
         for tag, neighbour_id in self.neighbour_view_ids.items():
             if neighbour_id == table_id:
-                self.search_bar.delete(0, tk.END)
-                self.search_bar.insert(0, tag)
+                self.searchbar.set_query(tag)
                 self.search()
 
     def export_to_xlsx(self):

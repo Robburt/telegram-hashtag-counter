@@ -33,3 +33,27 @@ class SortingSwitch(tk.Frame):
         else:
             self.mode = "Usages"
         self.button.configure(text=self.mode)
+
+class SearchBar(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+
+        self.displaying_full_table = True
+        self.searchbar = tk.Entry(self)
+        self.button = tk.Button(self, text="Search", width=10)
+        self.searchbar.grid(row=0, column=0, sticky=tk.E, padx=10)
+        self.button.grid(row=0, column=1, sticky=tk.E)
+
+    def bind_command(self, command):
+        self.button.configure(command=command)
+
+    @property
+    def query(self):
+        return self.searchbar.get()
+
+    def resolve_displaying_full_table(self):
+        self.displaying_full_table = self.query == ''
+
+    def set_query(self, query):
+        self.searchbar.delete(0, tk.END)
+        self.searchbar.insert(0, query)

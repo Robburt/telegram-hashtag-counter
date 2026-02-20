@@ -56,14 +56,9 @@ class WindowInterface:
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
         self.export_button.grid(row=3, column=0, sticky=tk.W)
 
-        self.sort_mode = "Usages"
-        self.sort_mode_frame = tk.Frame(self.contents)
-        self.sort_mode_text = tk.Label(self.sort_mode_frame, text="Sorting mode: ", font=("Arial", 10))
-        self.sort_mode_button = tk.Button(self.sort_mode_frame, text=self.sort_mode, command=self.switch_sorting_mode, width=20)
-        self.sort_mode_button['state'] = 'disabled'
-        self.sort_mode_frame.grid(row=3, column=2, sticky=tk.E)
-        self.sort_mode_text.grid(row=0, column=0, sticky=tk.E)
-        self.sort_mode_button.grid(row=0, column=1, sticky=tk.E)
+        self.sorting_switch = UI.SortingSwitch(self.contents)
+        self.sorting_switch.bind_command(self.switch_sorting_mode)
+        self.sorting_switch.grid(row=3, column=2, sticky=tk.E)
 
         self.contents.grid(row=0, column=0)
         self.tag_info.grid(row=0, column=1, sticky=tk.N)
@@ -94,7 +89,7 @@ class WindowInterface:
             tag.table_id = table_id
         self.tag_box.selection_set(self.tag_box.get_children()[0])
 
-        self.sort_mode_button['state'] = 'normal'
+        self.sorting_switch.button_enable()
 
     def open_file_command(self):
         results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
@@ -171,13 +166,12 @@ class WindowInterface:
             for tag2, table_id in zip(table2.values(), self.tag_box.get_children()):
                 tag2.table_id = table_id
 
-        if self.sort_mode == 'Usages':
-            self.sort_mode = 'Alphabetically'
-            switch_sorting(self.counter.tags_table, self.counter.tags_table_alphabetically)
-        else:
-            self.sort_mode = 'Usages'
-            switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
-        self.sort_mode_button.configure(text=self.sort_mode)
+        match self.sorting_switch.mode:
+            case "Usages":
+                switch_sorting(self.counter.tags_table, self.counter.tags_table_alphabetically)
+            case "Alphabetically":
+                switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
+        self.sorting_switch.switch_mode()
         self.tag_box.selection_set(self.tag_box.get_children()[0])
 
 class Counter:

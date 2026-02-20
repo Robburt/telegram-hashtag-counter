@@ -13,7 +13,7 @@ class WindowInterface:
         self.root.title("Telegram Hashtag Counter")
 
         self.menubar = UI.Menubar(self.root)
-        self.root['menu'] = self.menubar
+        self.root.configure(menu=self.menubar)
 
         self.contents = tk.Frame(self.root, border=10)
         self.tag_info = tk.Frame(self.root, border=20)

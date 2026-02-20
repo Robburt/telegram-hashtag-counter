@@ -2,7 +2,7 @@ import os
 import json
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from modules import Table, Message, Tag
+from modules import Table, Message, Tag, UI
 
 class WindowInterface:
     def __init__(self):
@@ -11,6 +11,9 @@ class WindowInterface:
 
         self.root = tk.Tk()
         self.root.title("Telegram Hashtag Counter")
+
+        self.menubar = UI.Menubar(self.root)
+        self.root['menu'] = self.menubar
 
         self.contents = tk.Frame(self.root, border=10)
         self.tag_info = tk.Frame(self.root, border=20)

@@ -15,7 +15,6 @@ class Tag:
     @property
     def dictionary(self):
         return {
-            'ID': self.table_id,
             'name': self.name,
             'uses': self.uses_amount,
             'first use': self.messages[0].date,

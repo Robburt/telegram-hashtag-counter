@@ -1,5 +1,5 @@
 import xlsxwriter
-import hashtag_counter
+import modules
 
 class Table:
     def __init__(self):
@@ -16,7 +16,7 @@ class Table:
         self.worksheet.write(0, self.next_free_column, title1)
         self.worksheet.write(0, self.next_free_column + 1, title2)
         for row, key, value in zip(range(len(dictionary.keys())), dictionary.keys(), dictionary.values()):
-            if type(value) is hashtag_counter.Tag:
+            if type(value) is modules.Tag.Tag:
                 value = value.uses_amount
             self.worksheet.write(row + self.offset, self.next_free_column, key)
             self.worksheet.write(row + self.offset, self.next_free_column + 1, value)

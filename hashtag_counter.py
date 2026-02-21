@@ -117,10 +117,7 @@ class WindowInterface:
             neighbour_id = self.treeview_neighbours.insert_tag(neighbour)
             self.neighbour_view_ids[neighbour.name] = neighbour_id
 
-    def search(self):
-        if self.searchbar.same_query:
-            return
-        self.searchbar.save_query()
+    def search(self, *args):
         self.tag_box.clear()
         for tag in self.counter.tags_table.values():
             if self.searchbar.query in tag.name:

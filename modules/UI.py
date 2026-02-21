@@ -39,29 +39,19 @@ class SearchBar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
 
-        self.searchbar = tk.Entry(self)
-        self.button = tk.Button(self, text="Search", width=10)
+        self.query_string = tk.StringVar()
+        self.searchbar = tk.Entry(self, textvariable=self.query_string)
         self.searchbar.grid(row=0, column=0, sticky=tk.E, padx=10)
-        self.button.grid(row=0, column=1, sticky=tk.E)
-        self.previous_query = ''
 
     def bind_command(self, command):
-        self.button.configure(command=command)
+        self.query_string.trace('w', command)
 
     @property
     def query(self):
-        return self.searchbar.get()
-
-    def save_query(self):
-        self.previous_query = self.query
-
-    @property
-    def same_query(self):
-        return self.previous_query == self.query
+        return self.query_string.get()
 
     def set_query(self, query):
-        self.searchbar.delete(0, tk.END)
-        self.searchbar.insert(0, query)
+        self.query_string.set(query)
 
 class FlavouredTreeView(ttk.Treeview):
     def __init__(self, parent, *args, **kwargs):

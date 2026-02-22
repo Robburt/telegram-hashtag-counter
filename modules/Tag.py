@@ -17,8 +17,8 @@ class Tag:
         return {
             'name': self.name,
             'uses': self.uses_amount,
-            'first use': self.messages[0].date,
-            'last use': self.messages[-1].date
+            'first use': ', '.join(self.messages[0].date.split('T')),
+            'last use' : ', '.join(self.messages[-1].date.split('T'))
         }
 
     @property

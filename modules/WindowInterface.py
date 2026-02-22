@@ -37,6 +37,10 @@ class WindowInterface:
         self.tag_box_scrollbar.grid(row=2, column=3, sticky=tk.N + tk.S, pady=10)
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
 
+        self.popup_menu_main = UI.PopupMenu(self.root)
+        self.popup_menu_main.bind_command("Edit tag", self.edit_tag)
+        self.tag_box.bind("<Button-3>", self.popup_menu_main.open)
+
         self.treeview_neighbours = UI.FlavouredTreeView(self.tag_info, columns="uses", height=20)
         self.treeview_neighbours.column("uses", width=10)
         self.treeview_neighbours.heading("uses", text='Usages')
@@ -44,9 +48,9 @@ class WindowInterface:
         self.treeview_neighbours.configure(yscrollcommand=self.treeview_neighbours_scrollbar.set)
         self.neighbour_view_ids = {}
 
-        self.popup_menu = tk.Menu(self.root, tearoff=0)
-        self.popup_menu.add_command(label="Go to tag", command=self.go_to_tag)
-        self.treeview_neighbours.bind("<Button-3>", self.popup)
+        self.popup_menu_neighbours = UI.PopupMenu(self.root)
+        self.popup_menu_neighbours.bind_command("Go to tag", self.go_to_tag)
+        self.treeview_neighbours.bind("<Button-3>", self.popup_menu_neighbours.open)
 
         self.export_button = tk.Button(self.contents, text="Export to Excel", command=self.export_to_xlsx, width=20)
         self.export_button.grid(row=3, column=0, sticky=tk.W)
@@ -125,12 +129,6 @@ class WindowInterface:
                 tag.table_id = table_id
         self.tag_box.reset_selection()
 
-    def popup(self, event):
-        try:
-            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            self.popup_menu.grab_release()
-
     def go_to_tag(self):
         if len(self.treeview_neighbours.selection()) == 0:
             return
@@ -139,6 +137,9 @@ class WindowInterface:
             if neighbour_id == table_id:
                 self.searchbar.set_query(tag)
                 self.search()
+
+    def edit_tag(self):
+        pass
 
     def export_to_xlsx(self):
         try:

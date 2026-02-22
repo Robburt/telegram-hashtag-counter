@@ -97,3 +97,16 @@ class FlavouredTreeView(ttk.Treeview):
 
     def reset_selection(self):
         self.selection_set(self.get_children()[0])
+
+class PopupMenu(tk.Menu):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Menu.__init__(self, parent, tearoff=0, *args, **kwargs)
+
+    def bind_command(self, text, command):
+        self.add_command(label=text, command=command)
+
+    def open(self, event):
+        try:
+            self.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.grab_release()

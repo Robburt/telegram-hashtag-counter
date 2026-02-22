@@ -1,16 +1,48 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 
 class Menubar(tk.Menu):
     def __init__(self, parent, *args, **kwargs):
         tk.Menu.__init__(self, parent, *args, **kwargs)
 
-        menu_options = tk.Menu(self)
-        menu_open = tk.Menu(self)
-        menu_new = tk.Menu(self)
-        self.add_cascade(menu=menu_options, label='Options')
-        self.add_cascade(menu=menu_open, label='Open')
-        self.add_cascade(menu=menu_new, label='New')
+        self.add_command(label='Options')
+        self.add_command(label='Open')
+        self.add_command(label='New', command=self.create_new_profile)
+
+    def create_new_profile(self):
+        self.np = NewProfileMenu()
+
+class NewProfileMenu(tk.Toplevel):
+    def __init__(self, *args, **kwargs):
+        tk.Toplevel.__init__(self, *args, **kwargs)
+
+        self.name = tk.StringVar()
+        self.name_frame = tk.Frame(self)
+        self.name_label = tk.Label(self.name_frame, text="Profile name: ", font=("Arial", 10))
+        self.name_entry = tk.Entry(self.name_frame, textvariable=self.name)
+        self.name_label.grid(row=0, column=0)
+        self.name_entry.grid(row=0, column=1)
+
+        self.results_dir = tk.StringVar()
+        self.dir_frame = tk.Frame(self)
+        self.dir_label = tk.Label(self.dir_frame, text="Results directory: ", font=("Arial", 10))
+        self.dir_button = tk.Button(self.dir_frame, text="Open...", command=self.open_results_file)
+        self.dir_label.grid(row=0, column=0)
+        self.dir_button.grid(row=0, column=1)
+
+        self.create_button = tk.Button(self, text='Create new profile', command=self.end)
+
+        self.name_frame.pack(anchor='w', padx=40, pady=20)
+        self.dir_frame.pack(anchor='w', padx=40, pady=20)
+        self.create_button.pack(anchor='w', padx=40, pady=10)
+
+    def open_results_file(self):
+        results_dir = filedialog.askopenfile(filetypes=[('JSON', '.json')])
+        if results_dir is not None:
+            self.results_dir.set(results_dir.name)
+
+    def end(self):
+        self.destroy()
 
 class SortingSwitch(tk.Frame):
     def __init__(self, parent, *args, **kwargs):

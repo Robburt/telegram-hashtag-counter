@@ -163,3 +163,5 @@ cython_debug/
 /Profiles/
 /groups.txt
 /lastdir.txt
+/TOKEN.txt
+/results.xlsx

@@ -161,6 +161,3 @@ class WindowInterface:
                 switch_sorting(self.counter.tags_table_alphabetically, self.counter.tags_table)
         self.sorting_switch.switch_mode()
         self.tag_box.reset_selection()
-
-if __name__ == "__main__":
-    WindowInterface()

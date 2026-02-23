@@ -110,3 +110,28 @@ class PopupMenu(tk.Menu):
             self.tk_popup(event.x_root, event.y_root, 0)
         finally:
             self.grab_release()
+
+class EditTagMenu(tk.Toplevel):
+    def __init__(self, old_tag : tk.StringVar, new_tag : tk.StringVar, *args, **kwargs):
+        tk.Toplevel.__init__(self, *args, **kwargs)
+
+        self.old_tag = old_tag
+        self.new_tag = new_tag
+
+        self.old_tag_frame = tk.Frame(self)
+        self.old_tag_label = tk.Label(self.old_tag_frame, text="Old tag: ", font=("Arial", 10))
+        self.old_tag_entry = tk.Entry(self.old_tag_frame, textvariable=self.old_tag)
+        self.old_tag_label.grid(row=0, column=0)
+        self.old_tag_entry.grid(row=0, column=1)
+
+        self.new_tag_frame = tk.Frame(self)
+        self.new_tag_label = tk.Label(self.new_tag_frame, text="New tag: ", font=("Arial", 10))
+        self.new_tag_entry = tk.Entry(self.new_tag_frame, textvariable=self.new_tag)
+        self.new_tag_label.grid(row=0, column=0)
+        self.new_tag_entry.grid(row=0, column=1)
+
+        self.create_button = tk.Button(self, text='Replace tags', command=self.destroy)
+
+        self.old_tag_frame.pack(anchor='w', padx=40, pady=20)
+        self.new_tag_frame.pack(anchor='w', padx=40, pady=20)
+        self.create_button.pack(anchor='w', padx=40, pady=10)

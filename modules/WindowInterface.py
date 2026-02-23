@@ -38,8 +38,10 @@ class WindowInterface:
         self.tag_box.bind("<<TreeviewSelect>>", lambda e: self.on_selection_change(self.tag_box.selection()))
 
         self.popup_menu_main = UI.PopupMenu(self.root)
-        self.popup_menu_main.bind_command("Edit tag", self.edit_tag)
+        self.popup_menu_main.bind_command("Edit tag", self.edit_tag_menu)
         self.tag_box.bind("<Button-3>", self.popup_menu_main.open)
+        self.old_tag = tk.StringVar()
+        self.new_tag = tk.StringVar()
 
         self.treeview_neighbours = UI.FlavouredTreeView(self.tag_info, columns="uses", height=20)
         self.treeview_neighbours.column("uses", width=10)
@@ -137,6 +139,11 @@ class WindowInterface:
             if neighbour_id == table_id:
                 self.searchbar.set_query(tag)
                 self.search()
+
+    def edit_tag_menu(self):
+        self.old_tag.set(self.counter.find_by_id(self.tag_box.selection()[0]).name)
+        self.new_tag.set('')
+        UI.EditTagMenu(self.old_tag, self.new_tag)
 
     def edit_tag(self):
         pass

@@ -76,7 +76,7 @@ class SearchBar(tk.Frame):
         self.searchbar.grid(row=0, column=0, sticky=tk.E, padx=10)
 
     def bind_command(self, command):
-        self.query_string.trace('w', command)
+        self.query_string.trace_add('write', command)
 
     @property
     def query(self):

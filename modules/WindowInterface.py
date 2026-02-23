@@ -132,7 +132,7 @@ class WindowInterface:
         self.tag_box.reset_selection()
 
     def go_to_tag(self):
-        if len(self.treeview_neighbours.selection()) == 0:
+        if self.treeview_neighbours.no_selection:
             return
         table_id = self.treeview_neighbours.selection()[0]
         for tag, neighbour_id in self.neighbour_view_ids.items():
@@ -141,6 +141,8 @@ class WindowInterface:
                 self.search()
 
     def edit_tag_menu(self):
+        if self.tag_box.no_selection:
+            return
         self.old_tag.set(self.counter.find_by_id(self.tag_box.selection()[0]).name)
         self.new_tag.set('')
         UI.EditTagMenu(self.old_tag, self.new_tag)

@@ -95,6 +95,10 @@ class FlavouredTreeView(ttk.Treeview):
     def clear(self):
         self.delete(*self.get_children())
 
+    @property
+    def no_selection(self):
+        return len(self.selection()) == 0
+
     def reset_selection(self):
         self.selection_set(self.get_children()[0])
 

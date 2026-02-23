@@ -106,7 +106,10 @@ class WindowInterface:
             tag_info_labels.append(tk.Label(self.tag_info, text=text, width=50, anchor=tk.W))
             tag_info_labels[-1].grid(row=len(tag_info_labels)-1, column=0, sticky=tk.W)
 
-        tag = self.counter.find_by_id(selection[0])
+        if self.tag_box.no_selection:
+            return
+        else:
+            tag = self.counter.find_by_id(selection[0])
         tag_info_labels = []
         for key, value in tag.dictionary.items():
             line(f"{key}: {value}")

@@ -100,7 +100,10 @@ class FlavouredTreeView(ttk.Treeview):
         return len(self.selection()) == 0
 
     def reset_selection(self):
-        self.selection_set(self.get_children()[0])
+        if len(self.get_children()) > 0:
+            self.selection_set(self.get_children()[0])
+        else:
+            return
 
 class PopupMenu(tk.Menu):
     def __init__(self, parent, *args, **kwargs):

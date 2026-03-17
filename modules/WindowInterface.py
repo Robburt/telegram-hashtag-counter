@@ -64,15 +64,16 @@ class WindowInterface:
         self.contents.grid(row=0, column=0)
         self.tag_info.grid(row=0, column=1, sticky=tk.N)
 
-        self.root.update_idletasks()
-        self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
-
         try:
             with open("lastdir.txt", "r") as f:
                 self.results_dir = f.read()
             self.launch_count()
+            self.on_selection_change(self.tag_box.selection())
         except FileNotFoundError:
             pass
+
+        self.root.update_idletasks()
+        self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
 
         self.root.mainloop()
 

@@ -148,10 +148,10 @@ class WindowInterface:
             return
         self.old_tag.set(self.counter.find_by_id(self.tag_box.selection()[0]).name)
         self.new_tag.set('')
-        UI.EditTagMenu(self.old_tag, self.new_tag)
+        UI.EditTagMenu(self.old_tag, self.new_tag, self.edit_tag)
 
     def edit_tag(self):
-        pass
+        print('hi', self.old_tag.get(), self.new_tag.get())
 
     def export_to_xlsx(self):
         try:

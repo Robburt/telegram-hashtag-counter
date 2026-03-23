@@ -119,12 +119,14 @@ class PopupMenu(tk.Menu):
             self.grab_release()
 
 class EditTagMenu(tk.Toplevel):
-    def __init__(self, old_tag : tk.StringVar, new_tag : tk.StringVar, edit_tag_cmd, *args, **kwargs):
+    def __init__(self, old_tag : tk.StringVar, new_tag : tk.StringVar, edit_tag_cmd, is_open_flag : tk.BooleanVar, *args, **kwargs):
         tk.Toplevel.__init__(self, *args, **kwargs)
 
         self.old_tag = old_tag
         self.new_tag = new_tag
         self.edit_tag_cmd = edit_tag_cmd
+        self.is_open = is_open_flag
+        self.is_open.set(True)
 
         self.old_tag_frame = tk.Frame(self)
         self.old_tag_label = tk.Label(self.old_tag_frame, text="Old tag: ", font=("Arial", 10))
@@ -143,6 +145,10 @@ class EditTagMenu(tk.Toplevel):
         self.old_tag_frame.pack(anchor='w', padx=40, pady=20)
         self.new_tag_frame.pack(anchor='w', padx=40, pady=20)
         self.replace_button.pack(anchor='w', padx=40, pady=10)
+
+    def destroy(self):
+        super().destroy()
+        self.is_open.set(False)
 
     def end(self):
         if len(self.new_tag.get()) < 1 or len(self.old_tag.get()) < 1:
